@@ -1,0 +1,196 @@
+/* ── Reset & base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #fffbf0;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  background: #f5a623;
+  color: #fff;
+  padding: 12px 20px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+  font-size: 1.8rem;
+  letter-spacing: 0.5px;
+}
+
+header p {
+  font-size: 0.95rem;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+/* ── Map ── */
+#map {
+  flex: 1;
+  cursor: crosshair;
+}
+
+/* ── Modal overlay ── */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#modal-overlay.hidden {
+  display: none;
+}
+
+/* ── Modal box ── */
+#modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 340px;
+  max-width: 94vw;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  animation: pop-in 0.2s ease;
+}
+
+@keyframes pop-in {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+#modal h2 {
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+  color: #f5a623;
+  text-align: center;
+}
+
+/* ── Form ── */
+#rating-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+}
+
+#rating-form input[type="text"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+#rating-form input[type="text"]:focus {
+  outline: none;
+  border-color: #f5a623;
+}
+
+/* ── Inline field error ── */
+.field-error {
+  color: #d9534f;
+  font-size: 0.82rem;
+  margin-top: -12px;
+  margin-bottom: 14px;
+}
+
+.field-error.hidden {
+  display: none;
+}
+
+/* ── Stars ── */
+#star-rating {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 22px;
+  margin-top: 4px;
+}
+
+.star {
+  font-size: 2rem;
+  cursor: pointer;
+  color: #ccc;
+  transition: color 0.15s, transform 0.1s;
+  user-select: none;
+  line-height: 1;
+}
+
+.star:hover,
+.star.hovered,
+.star.selected {
+  color: #f5a623;
+}
+
+.star:hover {
+  transform: scale(1.15);
+}
+
+/* ── Buttons ── */
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-buttons button {
+  padding: 9px 22px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+#save-btn {
+  background: #f5a623;
+  color: #fff;
+}
+
+#cancel-btn {
+  background: #eee;
+  color: #555;
+}
+
+.modal-buttons button:hover {
+  opacity: 0.85;
+}
+
+/* ── Custom map marker popup ── */
+.popup-content {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.popup-content .popup-name {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.popup-content .popup-stars {
+  color: #f5a623;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+.popup-content .popup-coords {
+  font-size: 0.72rem;
+  color: #999;
+  margin-top: 4px;
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emma's Pommesblog 🍟</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>🍟 Emma's Pommesblog</h1>
+    <p>Click anywhere on the map to rate a fries spot!</p>
+  </header>
+
+  <div id="map"></div>
+
+  <!-- Rating Form Modal -->
+  <div id="modal-overlay" class="hidden">
+    <div id="modal">
+      <h2>Add a Fries Spot</h2>
+      <form id="rating-form">
+        <label for="spot-name">Place name</label>
+        <input type="text" id="spot-name" placeholder="e.g. Fritz's Fries Stand" required />
+
+        <label id="rating-label">Rating</label>
+        <div id="star-rating" role="group" aria-labelledby="rating-label" aria-describedby="rating-error">
+          <span class="star" data-value="1" title="1 star" tabindex="0" role="radio" aria-label="1 star">★</span>
+          <span class="star" data-value="2" title="2 stars" tabindex="0" role="radio" aria-label="2 stars">★</span>
+          <span class="star" data-value="3" title="3 stars" tabindex="0" role="radio" aria-label="3 stars">★</span>
+          <span class="star" data-value="4" title="4 stars" tabindex="0" role="radio" aria-label="4 stars">★</span>
+          <span class="star" data-value="5" title="5 stars" tabindex="0" role="radio" aria-label="5 stars">★</span>
+        </div>
+        <p id="rating-error" class="field-error hidden" role="alert" aria-live="assertive"></p>
+        <input type="hidden" id="rating-value" value="0" aria-labelledby="rating-label" />
+
+        <div class="modal-buttons">
+          <button type="submit" id="save-btn">Save</button>
+          <button type="button" id="cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
