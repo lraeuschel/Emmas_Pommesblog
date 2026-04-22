@@ -1,5 +1,5 @@
 name: emmas_pommes_blog
-description: "A new Flutter project."
+description: "Emmas Pommesblog - Finde und bewerte die besten Pommesbuden!"
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -9,6 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  supabase_flutter: ^2.0.0
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.0
+  flutter_dotenv: ^5.0.0
+  cached_network_image: ^3.0.0
+  image_picker: ^1.0.0
+  shared_preferences: ^2.0.0
+  intl: ^0.19.0
+  url_launcher: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -17,3 +26,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - .env
