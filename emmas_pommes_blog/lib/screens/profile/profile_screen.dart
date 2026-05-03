@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
@@ -16,6 +17,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _lastNameController = TextEditingController();
   final _secretController = TextEditingController();
   bool _saving = false;
+  String? _profileImageUrl;
+  bool _uploadingImage = false;
 
   @override
   void initState() {
@@ -25,6 +28,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _firstNameController.text = user.firstName;
       _lastNameController.text = user.lastName;
       _secretController.text = user.secret ?? '';
+      _loadProfileImage();
+    }
+  }
+
+  Future<void> _loadProfileImage() async {
+    final url = await AuthService.getProfileImageUrl();
+    if (mounted && url != null) setState(() => _profileImageUrl = url);
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    setState(() => _uploadingImage = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      await AuthService.uploadProfileImage(picked.name, bytes);
+      await _loadProfileImage();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fehler: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
     }
   }
 
@@ -98,23 +127,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
-                      // Avatar
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: PommesTheme.lightPurple,
-                        backgroundImage: user.profileImage != null
-                            ? NetworkImage(user.profileImage!)
-                            : null,
-                        child: user.profileImage == null
-                            ? Text(
-                                user.initials,
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                      // Avatar with upload
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundColor: PommesTheme.lightPurple,
+                            backgroundImage: _profileImageUrl != null
+                                ? NetworkImage(_profileImageUrl!)
+                                : null,
+                            child: _profileImageUrl == null
+                                ? Text(
+                                    user.initials,
+                                    style: const TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap:
+                                  _uploadingImage ? null : _pickAndUploadAvatar,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: PommesTheme.pommesYellow,
+                                  shape: BoxShape.circle,
                                 ),
-                              )
-                            : null,
+                                child: _uploadingImage
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.black),
+                                      )
+                                    : const Icon(Icons.camera_alt,
+                                        size: 18, color: Colors.black),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Text(

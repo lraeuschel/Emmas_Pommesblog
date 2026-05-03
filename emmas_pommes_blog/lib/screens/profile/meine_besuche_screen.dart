@@ -10,10 +10,11 @@ class MeineBesucheScreen extends StatefulWidget {
   const MeineBesucheScreen({super.key});
 
   @override
-  State<MeineBesucheScreen> createState() => _MeineBesucheScreenState();
+  MeineBesucheScreenState createState() => MeineBesucheScreenState();
 }
 
-class _MeineBesucheScreenState extends State<MeineBesucheScreen> {
+class MeineBesucheScreenState extends State<MeineBesucheScreen> {
+  void reload() => _load();
   List<Besuch> _besuche = [];
   bool _loading = true;
 
@@ -69,64 +70,62 @@ class _MeineBesucheScreenState extends State<MeineBesucheScreen> {
                     ],
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: Column(
-                    children: [
-                      // Stats header
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        color: PommesTheme.surfaceDark,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _statItem(
-                              '${_besuche.length}',
-                              'Besuche',
-                              Icons.restaurant,
-                            ),
-                            _statItem(
-                              _besuche
-                                  .map((b) => b.location)
-                                  .toSet()
-                                  .length
-                                  .toString(),
-                              'Buden',
-                              Icons.store,
-                            ),
-                            _statItem(
-                              _averageRating(),
-                              'Ø Rating',
-                              Icons.star,
-                            ),
-                          ],
-                        ),
+              : Column(
+                  children: [
+                    // Stats header
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      color: PommesTheme.surfaceDark,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _statItem(
+                            '${_besuche.length}',
+                            'Besuche',
+                            Icons.restaurant,
+                          ),
+                          _statItem(
+                            _besuche
+                                .map((b) => b.location)
+                                .toSet()
+                                .length
+                                .toString(),
+                            'Buden',
+                            Icons.store,
+                          ),
+                          _statItem(
+                            _averageRating(),
+                            'Ø Rating',
+                            Icons.star,
+                          ),
+                        ],
                       ),
-                      // List
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: _besuche.length,
-                          itemBuilder: (context, index) {
-                            final besuch = _besuche[index];
-                            return BesuchCard(
-                              besuch: besuch,
-                              onTap: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => BesuchDetailScreen(
-                                        besuchId: besuch.id),
-                                  ),
-                                );
-                                _load();
-                              },
-                            );
-                          },
-                        ),
+                    ),
+                    // List
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: _besuche.length,
+                        itemBuilder: (context, index) {
+                          final besuch = _besuche[index];
+                          return BesuchCard(
+                            besuch: besuch,
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => BesuchDetailScreen(
+                                      userId: besuch.userId,
+                                      location: besuch.location),
+                                ),
+                              );
+                              _load();
+                            },
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
     );
   }

@@ -27,19 +27,15 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
   double _waitingTimeRating = 0;
   double _ambientRating = 0;
 
-  Uint8List? _imageBytes;
-  String? _imageName;
+  final List<({String name, Uint8List bytes})> _images = [];
   bool _loading = false;
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      final bytes = await picked.readAsBytes();
-      setState(() {
-        _imageBytes = bytes;
-        _imageName = picked.name;
-      });
+    final picked = await picker.pickMultiImage();
+    for (final xfile in picked) {
+      final bytes = await xfile.readAsBytes();
+      setState(() => _images.add((name: xfile.name, bytes: bytes)));
     }
   }
 
@@ -54,22 +50,23 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
 
     setState(() => _loading = true);
     try {
-      String? imageUrl;
-      if (_imageBytes != null && _imageName != null) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        imageUrl = await BesuchService.uploadImage(
-          '${timestamp}_$_imageName',
-          _imageBytes!,
+      final userId = AuthService.currentUser!.id;
+
+      // Bilder hochladen
+      if (_images.isNotEmpty) {
+        await BesuchService.uploadImages(
+          userId: userId,
+          location: widget.bude.id,
+          files: _images,
         );
       }
 
-      await BesuchService.create(
+      await BesuchService.createOrUpdate(
         location: widget.bude.id,
-        userId: AuthService.currentUser!.id,
+        userId: userId,
         price: _priceController.text.isNotEmpty
             ? double.tryParse(_priceController.text.replaceAll(',', '.'))
             : null,
-        linkToPicture: imageUrl,
         review: _reviewController.text.trim().isNotEmpty
             ? _reviewController.text.trim()
             : null,
@@ -149,41 +146,65 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Photo
-                const Text('Foto',
+                // Photos (multiple)
+                const Text('Fotos',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                if (_imageBytes != null)
-                  Stack(
+                if (_images.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(
-                          _imageBytes!,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton(
-                          onPressed: () => setState(() {
-                            _imageBytes = null;
-                            _imageName = null;
-                          }),
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          style: IconButton.styleFrom(
-                              backgroundColor: Colors.black54),
+                      ..._images.asMap().entries.map((entry) => Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.memory(
+                                  entry.value.bytes,
+                                  height: 120,
+                                  width: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () => setState(
+                                      () => _images.removeAt(entry.key)),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.white, size: 16),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )),
+                      GestureDetector(
+                        onTap: _pickImages,
+                        child: Container(
+                          height: 120,
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: PommesTheme.surfaceDark,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: const Icon(Icons.add_photo_alternate,
+                              size: 32, color: Colors.white38),
                         ),
                       ),
                     ],
                   )
                 else
                   GestureDetector(
-                    onTap: _pickImage,
+                    onTap: _pickImages,
                     child: Container(
                       height: 150,
                       width: double.infinity,
@@ -198,7 +219,7 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
                           Icon(Icons.add_a_photo,
                               size: 40, color: Colors.white38),
                           SizedBox(height: 8),
-                          Text('Foto hinzufügen',
+                          Text('Fotos hinzufügen',
                               style: TextStyle(color: Colors.white38)),
                         ],
                       ),
@@ -246,6 +267,14 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return null;
+                    final parsed = double.tryParse(value.replaceAll(',', '.'));
+                    if (parsed == null || parsed < 0) {
+                      return 'Bitte eine gültige Zahl eingeben';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 

@@ -1,11 +1,13 @@
 class AppConstants {
   static const String appName = "Emma's Pommesblog";
-  static const String tablePommesbude = 'Pommesbude';
-  static const String tableBesuch = 'Besuch';
+  static const String tablePommesbude = 'pommesbude';
+  static const String tableVisit = 'visit';
   static const String tableUser = 'user';
-  static const String tableReaktion = 'reaktion';
-  static const String tableKommentar = 'kommentar';
-  static const String storageBucket = 'images';
+
+  // Storage buckets
+  static const String bucketPommesbude = 'pommesbude_image'; // public
+  static const String bucketProfile = 'profile_images';       // private
+  static const String bucketEssen = 'essen_image';            // private
 
   // Default map center (Germany)
   static const double defaultLat = 51.9607;
@@ -18,17 +20,5 @@ class AppConstants {
     'Service',
     'Wartezeit',
     'Ambiente',
-  ];
-
-  // Available reaction emojis
-  static const List<String> reactionEmojis = [
-    '🍟',
-    '❤️',
-    '👍',
-    '🔥',
-    '😋',
-    '⭐',
-    '🤤',
-    '💯',
   ];
 }

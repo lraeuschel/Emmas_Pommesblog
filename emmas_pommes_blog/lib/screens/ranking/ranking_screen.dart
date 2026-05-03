@@ -11,11 +11,13 @@ class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
 
   @override
-  State<RankingScreen> createState() => _RankingScreenState();
+  RankingScreenState createState() => RankingScreenState();
 }
 
-class _RankingScreenState extends State<RankingScreen>
+class RankingScreenState extends State<RankingScreen>
     with SingleTickerProviderStateMixin {
+
+  void reload() => _loadData();
   late TabController _tabController;
   List<Pommesbude> _topBuden = [];
   List<Map<String, dynamic>> _topUsers = [];
@@ -87,7 +89,8 @@ class _RankingScreenState extends State<RankingScreen>
       return const Center(child: CircularProgressIndicator());
     }
 
-    final ranked = _topBuden.where((b) => b.averageRating != null).toList();
+    final ranked = List<Pommesbude>.from(_topBuden)
+      ..sort((a, b) => b.visitCount.compareTo(a.visitCount));
     if (ranked.isEmpty) {
       return const Center(
         child: Column(
@@ -95,23 +98,20 @@ class _RankingScreenState extends State<RankingScreen>
           children: [
             Text('🍟', style: TextStyle(fontSize: 48)),
             SizedBox(height: 8),
-            Text('Noch keine bewerteten Buden',
+            Text('Noch keine Pommesbuden',
                 style: TextStyle(color: Colors.white54)),
           ],
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadBuden,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: ranked.length,
-        itemBuilder: (context, index) {
-          final bude = ranked[index];
-          return _buildBudeRankCard(index + 1, bude);
-        },
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: ranked.length,
+      itemBuilder: (context, index) {
+        final bude = ranked[index];
+        return _buildBudeRankCard(index + 1, bude);
+      },
     );
   }
 
@@ -203,20 +203,17 @@ class _RankingScreenState extends State<RankingScreen>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadUsers,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: _topUsers.length,
-        itemBuilder: (context, index) {
-          final entry = _topUsers[index];
-          final user = entry['user'] != null
-              ? AppUser.fromJson(entry['user'])
-              : null;
-          final count = entry['count'] as int;
-          return _buildUserRankCard(index + 1, user, count);
-        },
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _topUsers.length,
+      itemBuilder: (context, index) {
+        final entry = _topUsers[index];
+        final user = entry['user'] != null
+            ? AppUser.fromJson(entry['user'])
+            : null;
+        final count = entry['count'] as int;
+        return _buildUserRankCard(index + 1, user, count);
+      },
     );
   }
 

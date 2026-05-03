@@ -1,10 +1,12 @@
 import 'app_user.dart';
 import 'pommesbude.dart';
 
+/// Ein Besuch (visit-Tabelle).
+/// Composite PK: id (= user uuid) + location (= pommesbude id).
 class Besuch {
-  final String id;
+  final String id; // = user UUID
   final DateTime createdAt;
-  final String location; // Pommesbude ID
+  final String location; // = pommesbude ID (int8)
   final double? price;
   final String? linkToPicture;
   final String? review;
@@ -13,7 +15,9 @@ class Besuch {
   final double? serviceRating;
   final double? waitingTimeRating;
   final double? ambientRating;
-  final String userId;
+
+  /// Convenience: userId == id (da visit.id die user-UUID ist)
+  String get userId => id;
 
   // Joined data
   final Pommesbude? pommesbude;
@@ -31,7 +35,6 @@ class Besuch {
     this.serviceRating,
     this.waitingTimeRating,
     this.ambientRating,
-    required this.userId,
     this.pommesbude,
     this.user,
   });
@@ -51,88 +54,30 @@ class Besuch {
       serviceRating: json['service_rating'] != null
           ? (json['service_rating'] as num).toDouble()
           : null,
-      waitingTimeRating: json['waiting_time_rating'] != null
-          ? (json['waiting_time_rating'] as num).toDouble()
+      // DB-Spalte heißt wating_time_rating (Typo)
+      waitingTimeRating: json['wating_time_rating'] != null
+          ? (json['wating_time_rating'] as num).toDouble()
           : null,
       ambientRating: json['ambient_rating'] != null
           ? (json['ambient_rating'] as num).toDouble()
           : null,
-      userId: json['user_id'].toString(),
-      pommesbude: json['Pommesbude'] != null
-          ? Pommesbude.fromJson(json['Pommesbude'])
+      pommesbude: json['pommesbude'] != null
+          ? Pommesbude.fromJson(json['pommesbude'])
           : null,
       user: json['user'] != null ? AppUser.fromJson(json['user']) : null,
     );
   }
 
   Map<String, dynamic> toInsertJson() => {
-        'location': location,
+        'id': id, // user UUID
+        'location': int.parse(location),
         'price': price,
         'link_to_picture': linkToPicture,
         'review': review,
         'count_visitors': countVisitors,
-        'overall_rating': overallRating,
-        'service_rating': serviceRating,
-        'waiting_time_rating': waitingTimeRating,
-        'ambient_rating': ambientRating,
-        'user_id': userId,
+        'overall_rating': overallRating?.round(),
+        'service_rating': serviceRating?.round(),
+        'wating_time_rating': waitingTimeRating?.round(),
+        'ambient_rating': ambientRating?.round(),
       };
-}
-
-class Reaktion {
-  final String id;
-  final DateTime createdAt;
-  final String besuchId;
-  final String userId;
-  final String emoji;
-  final AppUser? user;
-
-  Reaktion({
-    required this.id,
-    required this.createdAt,
-    required this.besuchId,
-    required this.userId,
-    required this.emoji,
-    this.user,
-  });
-
-  factory Reaktion.fromJson(Map<String, dynamic> json) {
-    return Reaktion(
-      id: json['id'].toString(),
-      createdAt: DateTime.parse(json['created_at']),
-      besuchId: json['besuch_id'].toString(),
-      userId: json['user_id'].toString(),
-      emoji: json['emoji'] ?? '',
-      user: json['user'] != null ? AppUser.fromJson(json['user']) : null,
-    );
-  }
-}
-
-class Kommentar {
-  final String id;
-  final DateTime createdAt;
-  final String besuchId;
-  final String userId;
-  final String text;
-  final AppUser? user;
-
-  Kommentar({
-    required this.id,
-    required this.createdAt,
-    required this.besuchId,
-    required this.userId,
-    required this.text,
-    this.user,
-  });
-
-  factory Kommentar.fromJson(Map<String, dynamic> json) {
-    return Kommentar(
-      id: json['id'].toString(),
-      createdAt: DateTime.parse(json['created_at']),
-      besuchId: json['besuch_id'].toString(),
-      userId: json['user_id'].toString(),
-      text: json['text'] ?? '',
-      user: json['user'] != null ? AppUser.fromJson(json['user']) : null,
-    );
-  }
 }

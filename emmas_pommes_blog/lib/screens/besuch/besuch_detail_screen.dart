@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/besuch.dart';
-import '../../services/auth_service.dart';
 import '../../services/besuch_service.dart';
+import '../../widgets/image_slideshow.dart';
 import '../../widgets/rating_bar.dart';
+import '../../widgets/user_avatar.dart';
 
 class BesuchDetailScreen extends StatefulWidget {
-  final String besuchId;
+  final String userId;
+  final String location;
 
-  const BesuchDetailScreen({super.key, required this.besuchId});
+  const BesuchDetailScreen({
+    super.key,
+    required this.userId,
+    required this.location,
+  });
 
   @override
   State<BesuchDetailScreen> createState() => _BesuchDetailScreenState();
@@ -18,10 +23,8 @@ class BesuchDetailScreen extends StatefulWidget {
 
 class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
   Besuch? _besuch;
-  List<Reaktion> _reactions = [];
-  List<Kommentar> _comments = [];
+  List<String> _imageUrls = [];
   bool _loading = true;
-  final _commentController = TextEditingController();
 
   @override
   void initState() {
@@ -32,9 +35,12 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      _besuch = await BesuchService.getById(widget.besuchId);
-      _reactions = await BesuchService.getReactions(widget.besuchId);
-      _comments = await BesuchService.getComments(widget.besuchId);
+      final results = await Future.wait([
+        BesuchService.getByKey(widget.userId, widget.location),
+        BesuchService.getVisitImages(widget.userId, widget.location),
+      ]);
+      _besuch = results[0] as Besuch;
+      _imageUrls = results[1] as List<String>;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -43,47 +49,6 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
       }
     }
     if (mounted) setState(() => _loading = false);
-  }
-
-  Future<void> _addReaction(String emoji) async {
-    try {
-      await BesuchService.addReaction(
-        besuchId: widget.besuchId,
-        userId: AuthService.currentUser!.id,
-        emoji: emoji,
-      );
-      _reactions = await BesuchService.getReactions(widget.besuchId);
-      if (mounted) setState(() {});
-    } catch (e) {
-      // Silently handle - reaction tables may not exist yet
-    }
-  }
-
-  Future<void> _addComment() async {
-    final text = _commentController.text.trim();
-    if (text.isEmpty) return;
-    try {
-      await BesuchService.addComment(
-        besuchId: widget.besuchId,
-        userId: AuthService.currentUser!.id,
-        text: text,
-      );
-      _commentController.clear();
-      _comments = await BesuchService.getComments(widget.besuchId);
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
   }
 
   @override
@@ -111,8 +76,10 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Photo
-            if (besuch.linkToPicture != null)
+            // Photos slideshow
+            if (_imageUrls.isNotEmpty)
+              ImageSlideshow(imageUrls: _imageUrls, height: 250)
+            else if (besuch.linkToPicture != null)
               Image.network(
                 besuch.linkToPicture!,
                 height: 250,
@@ -129,19 +96,7 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
                   // User info
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: PommesTheme.lightPurple,
-                        backgroundImage: besuch.user?.profileImage != null
-                            ? NetworkImage(besuch.user!.profileImage!)
-                            : null,
-                        child: besuch.user?.profileImage == null
-                            ? Text(besuch.user?.initials ?? '?',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold))
-                            : null,
-                      ),
+                      UserAvatar(user: besuch.user, radius: 24),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -248,110 +203,6 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
                     ),
                   ],
 
-                  // Reactions
-                  const SizedBox(height: 24),
-                  const Text('Reaktionen',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-
-                  // Emoji picker
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: AppConstants.reactionEmojis.map((emoji) {
-                      final count = _reactions
-                          .where((r) => r.emoji == emoji)
-                          .length;
-                      final myReaction = _reactions.any((r) =>
-                          r.emoji == emoji &&
-                          r.userId == AuthService.currentUser?.id);
-                      return ActionChip(
-                        label: Text('$emoji ${count > 0 ? count : ''}'),
-                        backgroundColor: myReaction
-                            ? PommesTheme.pommesYellow
-                            : PommesTheme.cardDark,
-                        onPressed: () => _addReaction(emoji),
-                      );
-                    }).toList(),
-                  ),
-
-                  // Comments
-                  const SizedBox(height: 24),
-                  Text('Kommentare (${_comments.length})',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-
-                  // Comment input
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _commentController,
-                          decoration: const InputDecoration(
-                            hintText: 'Kommentar schreiben...',
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                          ),
-                          onFieldSubmitted: (_) => _addComment(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: _addComment,
-                        icon: const Icon(Icons.send),
-                        color: PommesTheme.pommesYellow,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Comment list
-                  ..._comments.map((comment) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: PommesTheme.cardDark,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: PommesTheme.lightPurple,
-                                    child: Text(
-                                      comment.user?.initials ?? '?',
-                                      style: const TextStyle(
-                                          fontSize: 10, color: Colors.white),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    comment.user?.displayName ?? 'Unbekannt',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    DateFormat('dd.MM. HH:mm')
-                                        .format(comment.createdAt),
-                                    style: const TextStyle(
-                                        color: Colors.white38, fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(comment.text),
-                            ],
-                          ),
-                        ),
-                      )),
                   const SizedBox(height: 32),
                 ],
               ),

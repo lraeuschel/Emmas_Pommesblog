@@ -4,7 +4,7 @@ class Pommesbude {
   final double lon;
   final double lat;
   final String name;
-  final String? linkToPhoto;
+  final String? budenImage;
 
   // Computed fields (from joins)
   final double? averageRating;
@@ -16,7 +16,7 @@ class Pommesbude {
     required this.lon,
     required this.lat,
     required this.name,
-    this.linkToPhoto,
+    this.budenImage,
     this.averageRating,
     this.visitCount = 0,
   });
@@ -25,10 +25,10 @@ class Pommesbude {
     return Pommesbude(
       id: json['id'].toString(),
       createdAt: DateTime.parse(json['created_at']),
-      lon: (json['lon'] as num).toDouble(),
-      lat: (json['lat'] as num).toDouble(),
+      lon: (json['lon'] as num?)?.toDouble() ?? 0,
+      lat: (json['lat'] as num?)?.toDouble() ?? 0,
       name: json['name'] ?? '',
-      linkToPhoto: json['link_to_photo'],
+      budenImage: json['buden_image'],
     );
   }
 
@@ -42,7 +42,7 @@ class Pommesbude {
       lon: lon,
       lat: lat,
       name: name,
-      linkToPhoto: linkToPhoto,
+      budenImage: budenImage,
       averageRating: averageRating ?? this.averageRating,
       visitCount: visitCount ?? this.visitCount,
     );
@@ -52,6 +52,6 @@ class Pommesbude {
         'lon': lon,
         'lat': lat,
         'name': name,
-        'link_to_photo': linkToPhoto,
+        'buden_image': budenImage,
       };
 }

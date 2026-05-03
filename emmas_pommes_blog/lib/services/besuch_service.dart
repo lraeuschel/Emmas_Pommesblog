@@ -2,13 +2,16 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../models/besuch.dart';
+import 'image_service.dart';
 
 class BesuchService {
   static final _supabase = Supabase.instance.client;
 
-  static Future<Besuch> create({
-    required String location,
+  /// Erstellt oder aktualisiert einen Besuch.
+  /// Composite PK: id (= userId) + location (= budeId).
+  static Future<Besuch> createOrUpdate({
     required String userId,
+    required String location,
     double? price,
     String? linkToPicture,
     String? review,
@@ -18,134 +21,87 @@ class BesuchService {
     double? waitingTimeRating,
     double? ambientRating,
   }) async {
+    final data = {
+      'id': userId,
+      'location': int.parse(location),
+      'price': price,
+      'link_to_picture': linkToPicture,
+      'review': review,
+      'count_visitors': countVisitors,
+      'overall_rating': overallRating?.round(),
+      'service_rating': serviceRating?.round(),
+      'wating_time_rating': waitingTimeRating?.round(),
+      'ambient_rating': ambientRating?.round(),
+    };
+
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
-        .insert({
-          'location': location,
-          'user_id': userId,
-          'price': price,
-          'link_to_picture': linkToPicture,
-          'review': review,
-          'count_visitors': countVisitors,
-          'overall_rating': overallRating,
-          'service_rating': serviceRating,
-          'waiting_time_rating': waitingTimeRating,
-          'ambient_rating': ambientRating,
-        })
-        .select('*, user(*), Pommesbude(*)')
+        .from(AppConstants.tableVisit)
+        .upsert(data)
+        .select('*, user(*), pommesbude(*)')
         .single();
     return Besuch.fromJson(response);
   }
 
   static Future<List<Besuch>> getByUser(String userId) async {
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
-        .select('*, Pommesbude(*), user(*)')
-        .eq('user_id', userId)
+        .from(AppConstants.tableVisit)
+        .select('*, pommesbude(*), user(*)')
+        .eq('id', userId)
         .order('created_at', ascending: false);
     return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
   static Future<List<Besuch>> getAll() async {
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
-        .select('*, Pommesbude(*), user(*)')
+        .from(AppConstants.tableVisit)
+        .select('*, pommesbude(*), user(*)')
         .order('created_at', ascending: false);
     return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
-  static Future<Besuch> getById(String id) async {
+  /// Lädt einen einzelnen Besuch per composite key (userId + location)
+  static Future<Besuch> getByKey(String userId, String location) async {
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
-        .select('*, Pommesbude(*), user(*)')
-        .eq('id', id)
+        .from(AppConstants.tableVisit)
+        .select('*, pommesbude(*), user(*)')
+        .eq('id', userId)
+        .eq('location', int.parse(location))
         .single();
     return Besuch.fromJson(response);
   }
 
-  static Future<String?> uploadImage(
-      String fileName, Uint8List fileBytes) async {
-    try {
-      final path = 'besuche/$fileName';
-      await _supabase.storage
-          .from(AppConstants.storageBucket)
-          .uploadBinary(path, fileBytes);
-      return _supabase.storage
-          .from(AppConstants.storageBucket)
-          .getPublicUrl(path);
-    } catch (_) {
-      return null;
+  /// Lädt mehrere Essensbilder für einen Besuch hoch.
+  /// Gibt die Liste der Storage-Pfade zurück.
+  static Future<List<String>> uploadImages({
+    required String userId,
+    required String location,
+    required List<({String name, Uint8List bytes})> files,
+  }) async {
+    final paths = <String>[];
+    for (final file in files) {
+      final path = await ImageService.uploadEssenImage(
+          userId, location, file.name, file.bytes);
+      paths.add(path);
     }
+    return paths;
   }
 
-  // --- Reactions ---
-
-  static Future<List<Reaktion>> getReactions(String besuchId) async {
-    final response = await _supabase
-        .from(AppConstants.tableReaktion)
-        .select('*, user(*)')
-        .eq('besuch_id', besuchId)
-        .order('created_at');
-    return (response as List).map((json) => Reaktion.fromJson(json)).toList();
-  }
-
-  static Future<void> addReaction({
-    required String besuchId,
-    required String userId,
-    required String emoji,
-  }) async {
-    // Remove existing reaction by this user first
-    await _supabase
-        .from(AppConstants.tableReaktion)
-        .delete()
-        .eq('besuch_id', besuchId)
-        .eq('user_id', userId);
-
-    await _supabase.from(AppConstants.tableReaktion).insert({
-      'besuch_id': besuchId,
-      'user_id': userId,
-      'emoji': emoji,
-    });
-  }
-
-  // --- Comments ---
-
-  static Future<List<Kommentar>> getComments(String besuchId) async {
-    final response = await _supabase
-        .from(AppConstants.tableKommentar)
-        .select('*, user(*)')
-        .eq('besuch_id', besuchId)
-        .order('created_at');
-    return (response as List).map((json) => Kommentar.fromJson(json)).toList();
-  }
-
-  static Future<Kommentar> addComment({
-    required String besuchId,
-    required String userId,
-    required String text,
-  }) async {
-    final response = await _supabase
-        .from(AppConstants.tableKommentar)
-        .insert({
-          'besuch_id': besuchId,
-          'user_id': userId,
-          'text': text,
-        })
-        .select('*, user(*)')
-        .single();
-    return Kommentar.fromJson(response);
+  /// Gibt signed URLs aller Bilder eines Besuchs zurück.
+  static Future<List<String>> getVisitImages(
+      String userId, String location) async {
+    return ImageService.getEssenImages(userId, location);
   }
 
   /// Returns a map of userId -> visitCount, sorted descending
   static Future<List<Map<String, dynamic>>> getUserRanking(
       {int limit = 50}) async {
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
-        .select('user_id, user(*)');
+        .from(AppConstants.tableVisit)
+        .select('id, user(*)');
 
     final visitsByUser = <String, Map<String, dynamic>>{};
     for (final row in (response as List)) {
-      final uid = row['user_id'].toString();
+      final uid = row['id'].toString();
       if (!visitsByUser.containsKey(uid)) {
         visitsByUser[uid] = {
           'user': row['user'],

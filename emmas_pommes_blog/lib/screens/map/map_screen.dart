@@ -4,7 +4,9 @@ import 'package:latlong2/latlong.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/pommesbude.dart';
+import '../../services/image_service.dart';
 import '../../services/pommesbude_service.dart';
+import '../../widgets/image_slideshow.dart';
 import '../../widgets/rating_bar.dart';
 import '../bude/bude_detail_screen.dart';
 import 'add_bude_dialog.dart';
@@ -208,72 +210,117 @@ class _MapScreenState extends State<MapScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: PommesTheme.surfaceDark,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('🍟', style: TextStyle(fontSize: 32)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    bude.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: PommesTheme.pommesYellow,
-                    ),
+      builder: (context) => _BudeInfoSheet(bude: bude),
+    );
+  }
+}
+
+/// Bottom-Sheet das asynchron Bude- + Essensbilder lädt und als Slideshow zeigt.
+class _BudeInfoSheet extends StatefulWidget {
+  final Pommesbude bude;
+  const _BudeInfoSheet({required this.bude});
+
+  @override
+  State<_BudeInfoSheet> createState() => _BudeInfoSheetState();
+}
+
+class _BudeInfoSheetState extends State<_BudeInfoSheet> {
+  List<String> _allImages = [];
+  bool _loadingImages = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImages();
+  }
+
+  Future<void> _loadImages() async {
+    final results = await Future.wait([
+      ImageService.getBudeImages(widget.bude.id),
+      ImageService.getAllEssenImagesForBude(widget.bude.id),
+    ]);
+    final budeImgs = results[0];
+    final essenImgs = results[1];
+    // Falls budenImage als URL in der DB steht, auch einbeziehen
+    final all = <String>[];
+    if (widget.bude.budenImage != null) {
+      all.add(widget.bude.budenImage!);
+    }
+    all.addAll(budeImgs.where((u) => !all.contains(u)));
+    all.addAll(essenImgs);
+    if (mounted) setState(() { _allImages = all; _loadingImages = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bude = widget.bude;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🍟', style: TextStyle(fontSize: 32)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  bude.name,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: PommesTheme.pommesYellow,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                RatingDisplay(rating: bude.averageRating, size: 20),
-                const SizedBox(width: 16),
-                Icon(Icons.restaurant, size: 18, color: Colors.white54),
-                const SizedBox(width: 4),
-                Text('${bude.visitCount} Besuche',
-                    style: const TextStyle(color: Colors.white54)),
-              ],
-            ),
-            if (bude.linkToPhoto != null) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  bude.linkToPhoto!,
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, e, s) => const SizedBox.shrink(),
                 ),
               ),
             ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => BudeDetailScreen(bude: bude),
-                    ),
-                  );
-                },
-                child: const Text('Details anzeigen'),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              RatingDisplay(rating: bude.averageRating, size: 20),
+              const SizedBox(width: 16),
+              Icon(Icons.restaurant, size: 18, color: Colors.white54),
+              const SizedBox(width: 4),
+              Text('${bude.visitCount} Besuche',
+                  style: const TextStyle(color: Colors.white54)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_loadingImages)
+            const SizedBox(
+              height: 150,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_allImages.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: ImageSlideshow(
+                imageUrls: _allImages,
+                height: 180,
               ),
             ),
-          ],
-        ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BudeDetailScreen(bude: bude),
+                  ),
+                );
+              },
+              child: const Text('Details anzeigen'),
+            ),
+          ),
+        ],
       ),
     );
   }

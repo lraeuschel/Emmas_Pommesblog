@@ -12,14 +12,17 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _secretController = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
+    _passwordController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _usernameController.dispose();
@@ -32,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.register(
+        password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         username: _usernameController.text.trim(),
@@ -86,6 +90,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 32),
 
+                    // Username
+                    TextFormField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Benutzername',
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Bitte eingeben';
+                        }
+                        if (v.trim().length < 3) {
+                          return 'Mindestens 3 Zeichen';
+                        }
+                        return null;
+                      },
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Passwort',
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Bitte eingeben';
+                        }
+                        if (v.length < 6) {
+                          return 'Mindestens 6 Zeichen';
+                        }
+                        return null;
+                      },
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+
                     // First name
                     TextFormField(
                       controller: _firstNameController,
@@ -108,26 +160,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: (v) =>
                           v == null || v.trim().isEmpty ? 'Bitte eingeben' : null,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Username
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Benutzername',
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Bitte eingeben';
-                        }
-                        if (v.trim().length < 3) {
-                          return 'Mindestens 3 Zeichen';
-                        }
-                        return null;
-                      },
                       textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 16),

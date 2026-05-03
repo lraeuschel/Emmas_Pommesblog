@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import '../models/besuch.dart';
 import '../widgets/rating_bar.dart';
+import '../widgets/user_avatar.dart';
 import 'package:intl/intl.dart';
 
 class BesuchCard extends StatelessWidget {
@@ -31,21 +32,7 @@ class BesuchCard extends StatelessWidget {
               // Header with user and date
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: PommesTheme.lightPurple,
-                    backgroundImage: besuch.user?.profileImage != null
-                        ? NetworkImage(besuch.user!.profileImage!)
-                        : null,
-                    child: besuch.user?.profileImage == null
-                        ? Text(
-                            besuch.user?.initials ?? '?',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          )
-                        : null,
-                  ),
+                  UserAvatar(user: besuch.user, radius: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

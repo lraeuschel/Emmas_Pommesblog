@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/pommesbude_service.dart';
 
 class AddBudeDialog extends StatefulWidget {
@@ -35,21 +36,24 @@ class _AddBudeDialogState extends State<AddBudeDialog> {
     if (_nameController.text.trim().isEmpty) return;
     setState(() => _loading = true);
     try {
-      String? photoUrl;
-      if (_imageBytes != null && _imageName != null) {
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        photoUrl = await PommesbudeService.uploadImage(
-          '${timestamp}_$_imageName',
-          _imageBytes!,
-        );
-      }
-
-      await PommesbudeService.create(
+      // Erst Bude anlegen, dann ggf. Bild hochladen
+      final bude = await PommesbudeService.create(
         lat: widget.lat,
         lon: widget.lon,
         name: _nameController.text.trim(),
-        linkToPhoto: photoUrl,
       );
+
+      if (_imageBytes != null && _imageName != null) {
+        final userId = Supabase.instance.client.auth.currentUser!.id;
+        final photoUrl = await PommesbudeService.uploadImage(
+          userId,
+          bude.id,
+          _imageName!,
+          _imageBytes!,
+        );
+        await PommesbudeService.updateImage(bude.id, photoUrl);
+      }
+
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {

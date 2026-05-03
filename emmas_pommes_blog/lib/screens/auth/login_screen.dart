@@ -14,11 +14,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -28,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await AuthService.login(
         username: _usernameController.text.trim(),
+        password: _passwordController.text,
       );
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -91,6 +95,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       validator: (v) =>
                           v == null || v.trim().isEmpty ? 'Bitte eingeben' : null,
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Passwort',
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Bitte eingeben' : null,
                       onFieldSubmitted: (_) => _login(),
                     ),
                     const SizedBox(height: 32),

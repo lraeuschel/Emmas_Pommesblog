@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/pommesbude.dart';
 import '../../models/besuch.dart';
+import '../../services/image_service.dart';
 import '../../services/pommesbude_service.dart';
 import '../../widgets/besuch_card.dart';
+import '../../widgets/image_slideshow.dart';
 import '../../widgets/rating_bar.dart';
 import '../besuch/add_besuch_screen.dart';
 import '../besuch/besuch_detail_screen.dart';
@@ -19,18 +21,31 @@ class BudeDetailScreen extends StatefulWidget {
 
 class _BudeDetailScreenState extends State<BudeDetailScreen> {
   List<Besuch> _visits = [];
+  List<String> _allImages = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadVisits();
+    _loadData();
   }
 
-  Future<void> _loadVisits() async {
+  Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      _visits = await PommesbudeService.getVisitsForBude(widget.bude.id);
+      final results = await Future.wait([
+        PommesbudeService.getVisitsForBude(widget.bude.id),
+        ImageService.getBudeImages(widget.bude.id),
+        ImageService.getAllEssenImagesForBude(widget.bude.id),
+      ]);
+      _visits = results[0] as List<Besuch>;
+      final budeImgs = results[1] as List<String>;
+      final essenImgs = results[2] as List<String>;
+      final all = <String>[];
+      if (widget.bude.budenImage != null) all.add(widget.bude.budenImage!);
+      all.addAll(budeImgs.where((u) => !all.contains(u)));
+      all.addAll(essenImgs);
+      _allImages = all;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -57,37 +72,15 @@ class _BudeDetailScreenState extends State<BudeDetailScreen> {
       appBar: AppBar(
         title: Text(widget.bude.name),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadVisits,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+      body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with photo
-              if (widget.bude.linkToPhoto != null)
-                Image.network(
-                  widget.bude.linkToPhoto!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, e, s) => Container(
-                    height: 200,
-                    color: PommesTheme.surfaceDark,
-                    child: const Center(
-                      child: Text('🍟', style: TextStyle(fontSize: 60)),
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  height: 150,
-                  width: double.infinity,
-                  color: PommesTheme.surfaceDark,
-                  child: const Center(
-                    child: Text('🍟', style: TextStyle(fontSize: 60)),
-                  ),
-                ),
+              // Header slideshow (Bude + Essensbilder)
+              ImageSlideshow(
+                imageUrls: _allImages,
+                height: 220,
+              ),
 
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -181,17 +174,18 @@ class _BudeDetailScreenState extends State<BudeDetailScreen> {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                BesuchDetailScreen(besuchId: besuch.id),
+                                BesuchDetailScreen(
+                                    userId: besuch.userId,
+                                    location: besuch.location),
                           ),
                         );
-                        _loadVisits();
+                        _loadData();
                       },
                     )),
               const SizedBox(height: 100),
             ],
           ),
         ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await Navigator.of(context).push<bool>(
@@ -199,7 +193,7 @@ class _BudeDetailScreenState extends State<BudeDetailScreen> {
               builder: (_) => AddBesuchScreen(bude: widget.bude),
             ),
           );
-          if (result == true) _loadVisits();
+          if (result == true) _loadData();
         },
         icon: const Icon(Icons.rate_review),
         label: const Text('Besuch eintragen'),

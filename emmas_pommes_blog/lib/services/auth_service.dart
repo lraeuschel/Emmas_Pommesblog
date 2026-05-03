@@ -1,36 +1,42 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 import '../config/constants.dart';
 import '../models/app_user.dart';
+import 'image_service.dart';
 
-/// Einfache Registrierung/Login ohne Passwort.
-/// Daten werden direkt in der user-Tabelle gespeichert.
+/// Auth über Supabase Auth (auth.users) + user-Tabelle.
+/// user.id ist FK auf auth.users.id.
 class AuthService {
   static AppUser? currentUser;
   static final _supabase = Supabase.instance.client;
 
-  /// Beim App-Start: gespeicherte user_id prüfen
+  /// Beim App-Start: aktive Supabase-Session prüfen und user-Profil laden
   static Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
-    if (userId != null) {
+    final session = _supabase.auth.currentSession;
+    if (session != null) {
       try {
         final response = await _supabase
             .from(AppConstants.tableUser)
             .select()
-            .eq('id', userId)
+            .eq('id', session.user.id)
             .single();
         currentUser = AppUser.fromJson(response);
       } catch (_) {
-        await prefs.remove('user_id');
+        // Profil existiert noch nicht oder Fehler → ausloggen
+        await _supabase.auth.signOut();
       }
     }
   }
 
   static bool get isLoggedIn => currentUser != null;
 
+  /// Generiert eine interne Email-Adresse aus dem Benutzernamen.
+  /// Supabase Auth benötigt eine Email, der User sieht sie aber nicht.
+  static String _emailFromUsername(String username) =>
+      '${username.toLowerCase()}@pommesblog.app';
+
   static Future<AppUser> register({
+    required String password,
     required String firstName,
     required String lastName,
     required String username,
@@ -45,12 +51,21 @@ class AuthService {
       throw Exception('Benutzername bereits vergeben');
     }
 
-    // Direkt in die user-Tabelle eintragen
-    final id = const Uuid().v4();
+    // 1) Supabase Auth: User anlegen mit generierter Email
+    final authResponse = await _supabase.auth.signUp(
+      email: _emailFromUsername(username),
+      password: password,
+    );
+    final authUser = authResponse.user;
+    if (authUser == null) {
+      throw Exception('Registrierung fehlgeschlagen');
+    }
+
+    // 2) user-Tabelle befüllen (id = auth.users.id)
     final response = await _supabase
         .from(AppConstants.tableUser)
         .insert({
-          'id': id,
+          'id': authUser.id,
           'first_name': firstName,
           'last_name': lastName,
           'username': username,
@@ -61,35 +76,41 @@ class AuthService {
 
     final user = AppUser.fromJson(response);
     currentUser = user;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_id', user.id);
     return user;
   }
 
   static Future<AppUser> login({
     required String username,
+    required String password,
   }) async {
+    // 1) Supabase Auth: einloggen mit generierter Email
+    final authResponse = await _supabase.auth.signInWithPassword(
+      email: _emailFromUsername(username),
+      password: password,
+    );
+    final authUser = authResponse.user;
+    if (authUser == null) {
+      throw Exception('Anmeldung fehlgeschlagen');
+    }
+
+    // 2) Profil aus user-Tabelle laden
     try {
       final response = await _supabase
           .from(AppConstants.tableUser)
           .select()
-          .eq('username', username)
+          .eq('id', authUser.id)
           .single();
-
       final user = AppUser.fromJson(response);
       currentUser = user;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', user.id);
       return user;
     } catch (_) {
-      throw Exception('Benutzername nicht gefunden');
+      throw Exception('Benutzerprofil nicht gefunden');
     }
   }
 
   static Future<void> logout() async {
+    await _supabase.auth.signOut();
     currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('user_id');
   }
 
   static Future<void> updateProfile({
@@ -114,5 +135,21 @@ class AuthService {
           .single();
       currentUser = AppUser.fromJson(response);
     }
+  }
+
+  /// Lädt ein Profilbild hoch und speichert den Pfad in der user-Tabelle.
+  static Future<void> uploadProfileImage(
+      String fileName, Uint8List bytes) async {
+    if (currentUser == null) return;
+    final path =
+        await ImageService.uploadProfileImage(currentUser!.id, fileName, bytes);
+    await updateProfile(profileImage: path);
+  }
+
+  /// Gibt die signed URL für das aktuelle Profilbild zurück.
+  static Future<String?> getProfileImageUrl() async {
+    final img = currentUser?.profileImage;
+    if (img == null) return null;
+    return ImageService.getProfileImageUrl(img);
   }
 }

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
 import '../models/pommesbude.dart';
 import '../models/besuch.dart';
+import 'image_service.dart';
 
 class PommesbudeService {
   static final _supabase = Supabase.instance.client;
@@ -21,9 +22,9 @@ class PommesbudeService {
     final enriched = <Pommesbude>[];
     for (final bude in buden) {
       final visits = await _supabase
-          .from(AppConstants.tableBesuch)
+          .from(AppConstants.tableVisit)
           .select('overall_rating')
-          .eq('location', bude.id);
+          .eq('location', int.parse(bude.id));
       final visitList = visits as List;
       final count = visitList.length;
       double? avg;
@@ -45,7 +46,7 @@ class PommesbudeService {
     final response = await _supabase
         .from(AppConstants.tablePommesbude)
         .select()
-        .eq('id', id)
+        .eq('id', int.parse(id))
         .single();
     return Pommesbude.fromJson(response);
   }
@@ -54,7 +55,7 @@ class PommesbudeService {
     required double lat,
     required double lon,
     required String name,
-    String? linkToPhoto,
+    String? budenImage,
   }) async {
     final response = await _supabase
         .from(AppConstants.tablePommesbude)
@@ -62,7 +63,7 @@ class PommesbudeService {
           'lat': lat,
           'lon': lon,
           'name': name,
-          'link_to_photo': linkToPhoto,
+          'buden_image': budenImage,
         })
         .select()
         .single();
@@ -71,26 +72,24 @@ class PommesbudeService {
 
   static Future<List<Besuch>> getVisitsForBude(String budeId) async {
     final response = await _supabase
-        .from(AppConstants.tableBesuch)
+        .from(AppConstants.tableVisit)
         .select('*, user(*)')
-        .eq('location', budeId)
+        .eq('location', int.parse(budeId))
         .order('created_at', ascending: false);
     return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
-  static Future<String?> uploadImage(
-      String fileName, Uint8List fileBytes) async {
-    try {
-      final path = 'pommesbuden/$fileName';
-      await _supabase.storage
-          .from(AppConstants.storageBucket)
-          .uploadBinary(path, fileBytes);
-      return _supabase.storage
-          .from(AppConstants.storageBucket)
-          .getPublicUrl(path);
-    } catch (_) {
-      return null;
-    }
+  static Future<String> uploadImage(
+      String userId, String budeId, String fileName, Uint8List fileBytes) async {
+    return ImageService.uploadBudeImage(userId, budeId, fileName, fileBytes);
+  }
+
+  /// Aktualisiert das Bild einer Pommesbude.
+  static Future<void> updateImage(String budeId, String imageUrl) async {
+    await _supabase
+        .from(AppConstants.tablePommesbude)
+        .update({'buden_image': imageUrl})
+        .eq('id', int.parse(budeId));
   }
 
   /// Returns top-rated Pommesbuden sorted by average overall_rating
