@@ -1,4 +1,6 @@
 name: Deploy Flutter Web to GitHub Pages
+permissions:
+  contents: write
 
 on:
   push:
@@ -33,4 +35,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/web
+          publish_dir: emmas_pommes_blog/build/web
