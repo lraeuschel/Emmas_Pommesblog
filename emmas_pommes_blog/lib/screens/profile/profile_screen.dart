@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import 'impressum_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -271,6 +272,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
 
                       const SizedBox(height: 48),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const ImpressumScreen()),
+                          ),
+                          icon: const Icon(Icons.info_outline),
+                          label: const Text('Impressum & Info'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(

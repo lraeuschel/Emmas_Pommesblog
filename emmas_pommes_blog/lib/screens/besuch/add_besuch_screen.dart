@@ -2,10 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
+import '../../models/app_user.dart';
 import '../../models/pommesbude.dart';
 import '../../services/auth_service.dart';
 import '../../services/besuch_service.dart';
 import '../../widgets/rating_bar.dart';
+import '../../widgets/user_avatar.dart';
 
 class AddBesuchScreen extends StatefulWidget {
   final Pommesbude bude;
@@ -28,6 +30,7 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
   double _ambientRating = 0;
 
   final List<({String name, Uint8List bytes})> _images = [];
+  final List<AppUser> _taggedUsers = [];
   bool _loading = false;
 
   Future<void> _pickImages() async {
@@ -36,6 +39,96 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
     for (final xfile in picked) {
       final bytes = await xfile.readAsBytes();
       setState(() => _images.add((name: xfile.name, bytes: bytes)));
+    }
+  }
+
+  Future<void> _showTagDialog() async {
+    final currentUserId = AuthService.currentUser?.id;
+    List<AppUser>? allUsers;
+    try {
+      allUsers = await BesuchService.getAllUsers();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fehler beim Laden der User')),
+        );
+      }
+      return;
+    }
+
+    // Filter: eigenen User und bereits getaggte raus
+    final available = allUsers
+        .where((u) =>
+            u.id != currentUserId &&
+            !_taggedUsers.any((t) => t.id == u.id))
+        .toList();
+
+    if (!mounted) return;
+
+    final selected = await showDialog<AppUser>(
+      context: context,
+      builder: (context) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filtered = available
+                .where((u) =>
+                    u.displayName.toLowerCase().contains(search.toLowerCase()) ||
+                    u.username.toLowerCase().contains(search.toLowerCase()))
+                .toList();
+            return AlertDialog(
+              title: const Text('Freund auswählen'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 350,
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Suchen...',
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (v) => setDialogState(() => search = v),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Text('Keine User gefunden',
+                                  style: TextStyle(color: Colors.white54)))
+                          : ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) {
+                                final user = filtered[i];
+                                return ListTile(
+                                  leading: UserAvatar(user: user, radius: 18),
+                                  title: Text(user.displayName),
+                                  subtitle: Text('@${user.username}',
+                                      style: const TextStyle(
+                                          color: Colors.white54, fontSize: 12)),
+                                  onTap: () =>
+                                      Navigator.of(context).pop(user),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Abbrechen'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (selected != null) {
+      setState(() => _taggedUsers.add(selected));
     }
   }
 
@@ -76,6 +169,15 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
         waitingTimeRating: _waitingTimeRating > 0 ? _waitingTimeRating : null,
         ambientRating: _ambientRating > 0 ? _ambientRating : null,
       );
+
+      // Tag users
+      if (_taggedUsers.isNotEmpty) {
+        await BesuchService.tagUsers(
+          visitUserId: userId,
+          visitLocation: widget.bude.id,
+          taggedUserIds: _taggedUsers.map((u) => u.id).toList(),
+        );
+      }
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -286,6 +388,32 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
                     prefixIcon: Icon(Icons.people),
                   ),
                   keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 24),
+
+                // Tag users
+                const Text('Freunde taggen',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ..._taggedUsers.map((user) => Chip(
+                          avatar: UserAvatar(user: user, radius: 12),
+                          label: Text(user.displayName),
+                          deleteIcon:
+                              const Icon(Icons.close, size: 16),
+                          onDeleted: () => setState(
+                              () => _taggedUsers.remove(user)),
+                        )),
+                    ActionChip(
+                      avatar: const Icon(Icons.person_add, size: 18),
+                      label: const Text('Freund hinzufügen'),
+                      onPressed: _showTagDialog,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 

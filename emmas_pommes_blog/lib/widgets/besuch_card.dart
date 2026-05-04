@@ -9,12 +9,14 @@ class BesuchCard extends StatelessWidget {
   final Besuch besuch;
   final VoidCallback? onTap;
   final bool showBudeName;
+  final bool isTagged;
 
   const BesuchCard({
     super.key,
     required this.besuch,
     this.onTap,
     this.showBudeName = true,
+    this.isTagged = false,
   });
 
   @override
@@ -103,6 +105,13 @@ class BesuchCard extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
+                  if (isTagged) ...[
+                    const Icon(Icons.tag, size: 16, color: PommesTheme.pommesYellow),
+                    const SizedBox(width: 4),
+                    const Text('Du warst dabei',
+                        style: TextStyle(color: PommesTheme.pommesYellow, fontSize: 12)),
+                    const SizedBox(width: 16),
+                  ],
                   if (besuch.price != null) ...[
                     Icon(Icons.euro, size: 16, color: PommesTheme.pommesYellow),
                     const SizedBox(width: 4),

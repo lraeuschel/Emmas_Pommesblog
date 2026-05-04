@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/constants.dart';
+import '../models/app_user.dart';
 import '../models/besuch.dart';
 import 'image_service.dart';
 
@@ -115,5 +116,62 @@ class BesuchService {
       ..sort(
           (a, b) => (b['count'] as int).compareTo(a['count'] as int));
     return ranking.take(limit).toList();
+  }
+
+  // ── Tagging ──────────────────────────────────────────────────
+
+  /// Tags andere User bei einem Besuch.
+  static Future<void> tagUsers({
+    required String visitUserId,
+    required String visitLocation,
+    required List<String> taggedUserIds,
+  }) async {
+    if (taggedUserIds.isEmpty) return;
+    final rows = taggedUserIds
+        .map((uid) => {
+              'visit_user_id': visitUserId,
+              'visit_location': int.parse(visitLocation),
+              'tagged_user_id': uid,
+            })
+        .toList();
+    await _supabase.from(AppConstants.tableVisitTags).insert(rows);
+  }
+
+  /// Gibt alle getaggten User eines Besuchs zurück.
+  static Future<List<AppUser>> getTaggedUsers(
+      String visitUserId, String visitLocation) async {
+    final response = await _supabase
+        .from(AppConstants.tableVisitTags)
+        .select('tagged_user_id, user!visit_tags_tagged_user_id_fkey(*)')
+        .eq('visit_user_id', visitUserId)
+        .eq('visit_location', int.parse(visitLocation));
+    return (response as List)
+        .where((row) => row['user'] != null)
+        .map((row) => AppUser.fromJson(row['user']))
+        .toList();
+  }
+
+  /// Gibt Besuche zurück, bei denen der User getaggt wurde.
+  static Future<List<Besuch>> getTaggedVisits(String userId) async {
+    final response = await _supabase
+        .from(AppConstants.tableVisitTags)
+        .select('visit_user_id, visit_location, visit!visit_tags_visit_user_id_visit_location_fkey(*, user(*), pommesbude(*))')
+        .eq('tagged_user_id', userId);
+    final visits = <Besuch>[];
+    for (final row in (response as List)) {
+      if (row['visit'] != null) {
+        visits.add(Besuch.fromJson(row['visit']));
+      }
+    }
+    return visits;
+  }
+
+  /// Alle User laden (für die Tag-Auswahl).
+  static Future<List<AppUser>> getAllUsers() async {
+    final response = await _supabase
+        .from(AppConstants.tableUser)
+        .select()
+        .order('username');
+    return (response as List).map((json) => AppUser.fromJson(json)).toList();
   }
 }

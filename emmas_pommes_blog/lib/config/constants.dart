@@ -3,6 +3,7 @@ class AppConstants {
   static const String tablePommesbude = 'pommesbude';
   static const String tableVisit = 'visit';
   static const String tableUser = 'user';
+  static const String tableVisitTags = 'visit_tags';
 
   // Storage buckets
   static const String bucketPommesbude = 'pommesbude_image'; // public

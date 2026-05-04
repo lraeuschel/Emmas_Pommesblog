@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
+import '../../models/app_user.dart';
 import '../../models/besuch.dart';
 import '../../services/besuch_service.dart';
 import '../../widgets/image_slideshow.dart';
@@ -24,6 +25,7 @@ class BesuchDetailScreen extends StatefulWidget {
 class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
   Besuch? _besuch;
   List<String> _imageUrls = [];
+  List<AppUser> _taggedUsers = [];
   bool _loading = true;
 
   @override
@@ -38,9 +40,11 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
       final results = await Future.wait([
         BesuchService.getByKey(widget.userId, widget.location),
         BesuchService.getVisitImages(widget.userId, widget.location),
+        BesuchService.getTaggedUsers(widget.userId, widget.location),
       ]);
       _besuch = results[0] as Besuch;
       _imageUrls = results[1] as List<String>;
+      _taggedUsers = results[2] as List<AppUser>;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,6 +184,25 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
                         ),
                     ],
                   ),
+
+                  // Tagged users
+                  if (_taggedUsers.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    const Text('Dabei waren:',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _taggedUsers
+                          .map((user) => Chip(
+                                avatar: UserAvatar(user: user, radius: 12),
+                                label: Text(user.displayName),
+                              ))
+                          .toList(),
+                    ),
+                  ],
 
                   // Review text
                   if (besuch.review != null &&

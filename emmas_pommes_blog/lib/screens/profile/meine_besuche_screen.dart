@@ -16,6 +16,7 @@ class MeineBesucheScreen extends StatefulWidget {
 class MeineBesucheScreenState extends State<MeineBesucheScreen> {
   void reload() => _load();
   List<Besuch> _besuche = [];
+  Set<String> _taggedKeys = {};
   bool _loading = true;
 
   @override
@@ -28,7 +29,28 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
     if (AuthService.currentUser == null) return;
     setState(() => _loading = true);
     try {
-      _besuche = await BesuchService.getByUser(AuthService.currentUser!.id);
+      final userId = AuthService.currentUser!.id;
+      final results = await Future.wait([
+        BesuchService.getByUser(userId),
+        BesuchService.getTaggedVisits(userId),
+      ]);
+      final own = results[0] as List<Besuch>;
+      final tagged = results[1] as List<Besuch>;
+      // Track tagged visit keys
+      _taggedKeys = tagged.map((b) => '${b.id}_${b.location}').toSet();
+      // Merge, avoid duplicates (same user+location)
+      final seen = <String>{};
+      final merged = <Besuch>[];
+      for (final b in own) {
+        final key = '${b.id}_${b.location}';
+        if (seen.add(key)) merged.add(b);
+      }
+      for (final b in tagged) {
+        final key = '${b.id}_${b.location}';
+        if (seen.add(key)) merged.add(b);
+      }
+      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _besuche = merged;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,8 +131,12 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
                         itemCount: _besuche.length,
                         itemBuilder: (context, index) {
                           final besuch = _besuche[index];
+                          final key = '${besuch.id}_${besuch.location}';
+                          final isTagged = _taggedKeys.contains(key) &&
+                              besuch.userId != AuthService.currentUser!.id;
                           return BesuchCard(
                             besuch: besuch,
+                            isTagged: isTagged,
                             onTap: () async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute(

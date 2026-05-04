@@ -96,11 +96,18 @@ class _MapScreenState extends State<MapScreen> {
                 AppConstants.defaultLon,
               ),
               initialZoom: AppConstants.defaultZoom,
+              minZoom: 3,
+              maxZoom: 18,
               onTap: _onMapTap,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.emmas.pommesblog',
               ),
               MarkerLayer(
@@ -189,6 +196,24 @@ class _MapScreenState extends State<MapScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 FloatingActionButton.small(
+                  heroTag: 'zoomIn',
+                  onPressed: () {
+                    final z = _mapController.camera.zoom + 1;
+                    _mapController.move(_mapController.camera.center, z.clamp(3, 18));
+                  },
+                  child: const Icon(Icons.add),
+                ),
+                const SizedBox(height: 4),
+                FloatingActionButton.small(
+                  heroTag: 'zoomOut',
+                  onPressed: () {
+                    final z = _mapController.camera.zoom - 1;
+                    _mapController.move(_mapController.camera.center, z.clamp(3, 18));
+                  },
+                  child: const Icon(Icons.remove),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.small(
                   heroTag: 'refresh',
                   onPressed: _loadBuden,
                   child: const Icon(Icons.refresh),
@@ -239,19 +264,12 @@ class _BudeInfoSheetState extends State<_BudeInfoSheet> {
   }
 
   Future<void> _loadImages() async {
-    final results = await Future.wait([
-      ImageService.getBudeImages(widget.bude.id),
-      ImageService.getAllEssenImagesForBude(widget.bude.id),
-    ]);
-    final budeImgs = results[0];
-    final essenImgs = results[1];
-    // Falls budenImage als URL in der DB steht, auch einbeziehen
+    final budeImgs = await ImageService.getBudeImages(widget.bude.id);
     final all = <String>[];
     if (widget.bude.budenImage != null) {
       all.add(widget.bude.budenImage!);
     }
     all.addAll(budeImgs.where((u) => !all.contains(u)));
-    all.addAll(essenImgs);
     if (mounted) setState(() { _allImages = all; _loadingImages = false; });
   }
 

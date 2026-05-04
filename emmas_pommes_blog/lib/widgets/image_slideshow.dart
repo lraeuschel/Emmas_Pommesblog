@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 
@@ -21,32 +22,55 @@ class ImageSlideshow extends StatefulWidget {
 }
 
 class _ImageSlideshowState extends State<ImageSlideshow> {
-  final PageController _controller = PageController();
+  PageController _controller = PageController();
   int _current = 0;
-  late final bool _autoPlay;
+  Timer? _autoPlayTimer;
 
   @override
   void initState() {
     super.initState();
-    _autoPlay = widget.imageUrls.length > 1;
-    if (_autoPlay) _startAutoPlay();
+    _maybeStartAutoPlay();
+  }
+
+  @override
+  void didUpdateWidget(ImageSlideshow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrls.length != widget.imageUrls.length) {
+      _autoPlayTimer?.cancel();
+      _current = 0;
+      _controller.dispose();
+      _controller = PageController();
+      _maybeStartAutoPlay();
+    }
+  }
+
+  void _maybeStartAutoPlay() {
+    if (widget.imageUrls.length > 1) _startAutoPlay();
   }
 
   void _startAutoPlay() {
-    Future.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || widget.imageUrls.length <= 1) return;
       final next = (_current + 1) % widget.imageUrls.length;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-      _startAutoPlay();
+      if (_controller.hasClients) {
+        _controller.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
     });
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _current = index);
+    if (widget.imageUrls.length > 1) _startAutoPlay();
   }
 
   @override
   void dispose() {
+    _autoPlayTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -90,7 +114,7 @@ class _ImageSlideshowState extends State<ImageSlideshow> {
           PageView.builder(
             controller: _controller,
             itemCount: widget.imageUrls.length,
-            onPageChanged: (i) => setState(() => _current = i),
+            onPageChanged: _onPageChanged,
             itemBuilder: (context, index) => Image.network(
               widget.imageUrls[index],
               width: double.infinity,

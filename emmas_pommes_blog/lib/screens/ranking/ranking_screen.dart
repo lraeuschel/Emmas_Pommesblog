@@ -5,6 +5,7 @@ import '../../models/app_user.dart';
 import '../../services/pommesbude_service.dart';
 import '../../services/besuch_service.dart';
 import '../../widgets/rating_bar.dart';
+import '../../widgets/user_avatar.dart';
 import '../bude/bude_detail_screen.dart';
 
 class RankingScreen extends StatefulWidget {
@@ -252,20 +253,7 @@ class RankingScreenState extends State<RankingScreen>
             ),
             const SizedBox(width: 16),
             // Avatar
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: PommesTheme.lightPurple,
-              backgroundImage: user?.profileImage != null
-                  ? NetworkImage(user!.profileImage!)
-                  : null,
-              child: user?.profileImage == null
-                  ? Text(
-                      user?.initials ?? '?',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
+            UserAvatar(user: user, radius: 20),
             const SizedBox(width: 12),
             // Info
             Expanded(
