@@ -154,7 +154,7 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
         );
       }
 
-      await BesuchService.createOrUpdate(
+      final besuch = await BesuchService.create(
         location: widget.bude.id,
         userId: userId,
         price: _priceController.text.isNotEmpty
@@ -173,8 +173,7 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
       // Tag users
       if (_taggedUsers.isNotEmpty) {
         await BesuchService.tagUsers(
-          visitUserId: userId,
-          visitLocation: widget.bude.id,
+          visitId: besuch.visitId,
           taggedUserIds: _taggedUsers.map((u) => u.id).toList(),
         );
       }

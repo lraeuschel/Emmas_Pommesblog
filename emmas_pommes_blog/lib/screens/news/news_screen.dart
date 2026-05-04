@@ -90,11 +90,11 @@ class NewsScreenState extends State<NewsScreen> {
       // Load all tags for recent visits in one query
       final tagRows = await supabase
           .from(AppConstants.tableVisitTags)
-          .select('visit_user_id, visit_location, user:tagged_user_id(*)');
-      // Group tags by visit key
+          .select('visit_id, user:tagged_user_id(*)');
+      // Group tags by visit_id
       final tagsByVisit = <String, List<AppUser>>{};
       for (final row in tagRows) {
-        final key = '${row['visit_user_id']}_${row['visit_location']}';
+        final key = row['visit_id'].toString();
         final user = AppUser.fromJson(row['user']);
         tagsByVisit.putIfAbsent(key, () => []).add(user);
       }
@@ -102,14 +102,13 @@ class NewsScreenState extends State<NewsScreen> {
       // Visits
       for (final row in (results[0] as List)) {
         final besuch = Besuch.fromJson(row);
-        final key = '${besuch.userId}_${besuch.location}';
         items.add(_NewsItem(
           type: _NewsType.visit,
           date: besuch.createdAt,
           user: besuch.user,
           bude: besuch.pommesbude,
           besuch: besuch,
-          taggedUsers: tagsByVisit[key] ?? [],
+          taggedUsers: tagsByVisit[besuch.visitId] ?? [],
         ));
       }
 
@@ -285,8 +284,7 @@ class NewsScreenState extends State<NewsScreen> {
               ? () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => BesuchDetailScreen(
-                        userId: item.besuch!.userId,
-                        location: item.besuch!.location,
+                        visitId: item.besuch!.visitId,
                       ),
                     ),
                   )

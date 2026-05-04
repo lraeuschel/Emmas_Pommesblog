@@ -8,9 +8,8 @@ import 'image_service.dart';
 class BesuchService {
   static final _supabase = Supabase.instance.client;
 
-  /// Erstellt oder aktualisiert einen Besuch.
-  /// Composite PK: id (= userId) + location (= budeId).
-  static Future<Besuch> createOrUpdate({
+  /// Erstellt einen neuen Besuch.
+  static Future<Besuch> create({
     required String userId,
     required String location,
     double? price,
@@ -37,7 +36,7 @@ class BesuchService {
 
     final response = await _supabase
         .from(AppConstants.tableVisit)
-        .upsert(data)
+        .insert(data)
         .select('*, user(*), pommesbude(*)')
         .single();
     return Besuch.fromJson(response);
@@ -60,13 +59,12 @@ class BesuchService {
     return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
-  /// Lädt einen einzelnen Besuch per composite key (userId + location)
-  static Future<Besuch> getByKey(String userId, String location) async {
+  /// Lädt einen einzelnen Besuch per visit_id
+  static Future<Besuch> getById(String visitId) async {
     final response = await _supabase
         .from(AppConstants.tableVisit)
         .select('*, pommesbude(*), user(*)')
-        .eq('id', userId)
-        .eq('location', int.parse(location))
+        .eq('visit_id', int.parse(visitId))
         .single();
     return Besuch.fromJson(response);
   }
@@ -122,15 +120,13 @@ class BesuchService {
 
   /// Tags andere User bei einem Besuch.
   static Future<void> tagUsers({
-    required String visitUserId,
-    required String visitLocation,
+    required String visitId,
     required List<String> taggedUserIds,
   }) async {
     if (taggedUserIds.isEmpty) return;
     final rows = taggedUserIds
         .map((uid) => {
-              'visit_user_id': visitUserId,
-              'visit_location': int.parse(visitLocation),
+              'visit_id': int.parse(visitId),
               'tagged_user_id': uid,
             })
         .toList();
@@ -138,13 +134,11 @@ class BesuchService {
   }
 
   /// Gibt alle getaggten User eines Besuchs zurück.
-  static Future<List<AppUser>> getTaggedUsers(
-      String visitUserId, String visitLocation) async {
+  static Future<List<AppUser>> getTaggedUsers(String visitId) async {
     final response = await _supabase
         .from(AppConstants.tableVisitTags)
-        .select('tagged_user_id, user!visit_tags_tagged_user_id_fkey(*)')
-        .eq('visit_user_id', visitUserId)
-        .eq('visit_location', int.parse(visitLocation));
+        .select('tagged_user_id, user:tagged_user_id(*)')
+        .eq('visit_id', int.parse(visitId));
     return (response as List)
         .where((row) => row['user'] != null)
         .map((row) => AppUser.fromJson(row['user']))
@@ -155,7 +149,7 @@ class BesuchService {
   static Future<List<Besuch>> getTaggedVisits(String userId) async {
     final response = await _supabase
         .from(AppConstants.tableVisitTags)
-        .select('visit_user_id, visit_location, visit!visit_tags_visit_user_id_visit_location_fkey(*, user(*), pommesbude(*))')
+        .select('visit_id, visit:visit_id(*, user(*), pommesbude(*))')
         .eq('tagged_user_id', userId);
     final visits = <Besuch>[];
     for (final row in (response as List)) {

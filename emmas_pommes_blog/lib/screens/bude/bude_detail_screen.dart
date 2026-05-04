@@ -175,8 +175,7 @@ class _BudeDetailScreenState extends State<BudeDetailScreen> {
                           MaterialPageRoute(
                             builder: (_) =>
                                 BesuchDetailScreen(
-                                    userId: besuch.userId,
-                                    location: besuch.location),
+                                    visitId: besuch.visitId),
                           ),
                         );
                         _loadData();

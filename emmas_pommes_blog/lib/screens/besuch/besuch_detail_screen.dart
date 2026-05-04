@@ -9,13 +9,11 @@ import '../../widgets/rating_bar.dart';
 import '../../widgets/user_avatar.dart';
 
 class BesuchDetailScreen extends StatefulWidget {
-  final String userId;
-  final String location;
+  final String visitId;
 
   const BesuchDetailScreen({
     super.key,
-    required this.userId,
-    required this.location,
+    required this.visitId,
   });
 
   @override
@@ -37,14 +35,14 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
+      final besuch = await BesuchService.getById(widget.visitId);
       final results = await Future.wait([
-        BesuchService.getByKey(widget.userId, widget.location),
-        BesuchService.getVisitImages(widget.userId, widget.location),
-        BesuchService.getTaggedUsers(widget.userId, widget.location),
+        BesuchService.getVisitImages(besuch.userId, besuch.location),
+        BesuchService.getTaggedUsers(widget.visitId),
       ]);
-      _besuch = results[0] as Besuch;
-      _imageUrls = results[1] as List<String>;
-      _taggedUsers = results[2] as List<AppUser>;
+      _besuch = besuch;
+      _imageUrls = results[0] as List<String>;
+      _taggedUsers = results[1] as List<AppUser>;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

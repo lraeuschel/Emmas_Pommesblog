@@ -36,18 +36,16 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
       ]);
       final own = results[0] as List<Besuch>;
       final tagged = results[1] as List<Besuch>;
-      // Track tagged visit keys
-      _taggedKeys = tagged.map((b) => '${b.id}_${b.location}').toSet();
-      // Merge, avoid duplicates (same user+location)
+      // Track tagged visit IDs
+      _taggedKeys = tagged.map((b) => b.visitId).toSet();
+      // Merge, avoid duplicates by visitId
       final seen = <String>{};
       final merged = <Besuch>[];
       for (final b in own) {
-        final key = '${b.id}_${b.location}';
-        if (seen.add(key)) merged.add(b);
+        if (seen.add(b.visitId)) merged.add(b);
       }
       for (final b in tagged) {
-        final key = '${b.id}_${b.location}';
-        if (seen.add(key)) merged.add(b);
+        if (seen.add(b.visitId)) merged.add(b);
       }
       merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       _besuche = merged;
@@ -131,8 +129,7 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
                         itemCount: _besuche.length,
                         itemBuilder: (context, index) {
                           final besuch = _besuche[index];
-                          final key = '${besuch.id}_${besuch.location}';
-                          final isTagged = _taggedKeys.contains(key) &&
+                          final isTagged = _taggedKeys.contains(besuch.visitId) &&
                               besuch.userId != AuthService.currentUser!.id;
                           return BesuchCard(
                             besuch: besuch,
@@ -141,8 +138,7 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
                               await Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => BesuchDetailScreen(
-                                      userId: besuch.userId,
-                                      location: besuch.location),
+                                      visitId: besuch.visitId),
                                 ),
                               );
                               _load();

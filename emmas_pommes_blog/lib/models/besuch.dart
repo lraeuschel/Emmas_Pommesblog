@@ -2,8 +2,8 @@ import 'app_user.dart';
 import 'pommesbude.dart';
 
 /// Ein Besuch (visit-Tabelle).
-/// Composite PK: id (= user uuid) + location (= pommesbude id).
 class Besuch {
+  final String visitId; // auto-increment PK
   final String id; // = user UUID
   final DateTime createdAt;
   final String location; // = pommesbude ID (int8)
@@ -24,6 +24,7 @@ class Besuch {
   final AppUser? user;
 
   Besuch({
+    required this.visitId,
     required this.id,
     required this.createdAt,
     required this.location,
@@ -41,6 +42,7 @@ class Besuch {
 
   factory Besuch.fromJson(Map<String, dynamic> json) {
     return Besuch(
+      visitId: json['visit_id'].toString(),
       id: json['id'].toString(),
       createdAt: DateTime.parse(json['created_at']),
       location: json['location'].toString(),
