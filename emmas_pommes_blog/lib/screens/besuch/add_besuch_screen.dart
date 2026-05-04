@@ -168,15 +168,8 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
         serviceRating: _serviceRating > 0 ? _serviceRating : null,
         waitingTimeRating: _waitingTimeRating > 0 ? _waitingTimeRating : null,
         ambientRating: _ambientRating > 0 ? _ambientRating : null,
+        taggedUserIds: _taggedUsers.map((u) => u.id).toList(),
       );
-
-      // Tag users
-      if (_taggedUsers.isNotEmpty) {
-        await BesuchService.tagUsers(
-          visitId: besuch.visitId,
-          taggedUserIds: _taggedUsers.map((u) => u.id).toList(),
-        );
-      }
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

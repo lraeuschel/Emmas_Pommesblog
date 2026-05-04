@@ -16,7 +16,6 @@ class MeineBesucheScreen extends StatefulWidget {
 class MeineBesucheScreenState extends State<MeineBesucheScreen> {
   void reload() => _load();
   List<Besuch> _besuche = [];
-  Set<String> _taggedKeys = {};
   bool _loading = true;
 
   @override
@@ -30,25 +29,9 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
     setState(() => _loading = true);
     try {
       final userId = AuthService.currentUser!.id;
-      final results = await Future.wait([
-        BesuchService.getByUser(userId),
-        BesuchService.getTaggedVisits(userId),
-      ]);
-      final own = results[0] as List<Besuch>;
-      final tagged = results[1] as List<Besuch>;
-      // Track tagged visit IDs
-      _taggedKeys = tagged.map((b) => b.visitId).toSet();
-      // Merge, avoid duplicates by visitId
-      final seen = <String>{};
-      final merged = <Besuch>[];
-      for (final b in own) {
-        if (seen.add(b.visitId)) merged.add(b);
-      }
-      for (final b in tagged) {
-        if (seen.add(b.visitId)) merged.add(b);
-      }
-      merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      _besuche = merged;
+      final own = await BesuchService.getByUser(userId);
+      own.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _besuche = own;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,11 +112,9 @@ class MeineBesucheScreenState extends State<MeineBesucheScreen> {
                         itemCount: _besuche.length,
                         itemBuilder: (context, index) {
                           final besuch = _besuche[index];
-                          final isTagged = _taggedKeys.contains(besuch.visitId) &&
-                              besuch.userId != AuthService.currentUser!.id;
                           return BesuchCard(
                             besuch: besuch,
-                            isTagged: isTagged,
+                            isTagged: false,
                             onTap: () async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute(

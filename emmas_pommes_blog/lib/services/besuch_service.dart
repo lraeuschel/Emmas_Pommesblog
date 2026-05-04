@@ -20,6 +20,7 @@ class BesuchService {
     double? serviceRating,
     double? waitingTimeRating,
     double? ambientRating,
+    List<String> taggedUserIds = const [],
   }) async {
     final data = {
       'id': userId,
@@ -39,7 +40,27 @@ class BesuchService {
         .insert(data)
         .select('*, user(*), pommesbude(*)')
         .single();
-    return Besuch.fromJson(response);
+    final besuch = Besuch.fromJson(response);
+
+    final uniqueTaggedUserIds = taggedUserIds
+        .where((id) => id != userId)
+        .toSet()
+        .toList();
+
+    if (uniqueTaggedUserIds.isNotEmpty) {
+      final mirroredVisitRows = await _insertTaggedVisitRows(
+        sourceData: data,
+        taggedUserIds: uniqueTaggedUserIds,
+      );
+      await _insertGroupTagRows(
+        originalVisitId: besuch.visitId,
+        creatorUserId: userId,
+        taggedUserIds: uniqueTaggedUserIds,
+        mirroredVisitRows: mirroredVisitRows,
+      );
+    }
+
+    return besuch;
   }
 
   static Future<List<Besuch>> getByUser(String userId) async {
@@ -118,8 +139,7 @@ class BesuchService {
 
   // ── Tagging ──────────────────────────────────────────────────
 
-  /// Tags andere User bei einem Besuch.
-  static Future<void> tagUsers({
+  static Future<void> _insertTagRows({
     required String visitId,
     required List<String> taggedUserIds,
   }) async {
@@ -131,6 +151,71 @@ class BesuchService {
             })
         .toList();
     await _supabase.from(AppConstants.tableVisitTags).insert(rows);
+  }
+
+  static Future<List<Map<String, dynamic>>> _insertTaggedVisitRows({
+    required Map<String, dynamic> sourceData,
+    required List<String> taggedUserIds,
+  }) async {
+    final rows = taggedUserIds
+        .map(
+          (uid) => {
+            ...sourceData,
+            'id': uid,
+          },
+        )
+        .toList();
+    final response = await _supabase
+        .from(AppConstants.tableVisit)
+        .insert(rows)
+        .select('visit_id, id');
+    return (response as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
+  static Future<void> _insertGroupTagRows({
+    required String originalVisitId,
+    required String creatorUserId,
+    required List<String> taggedUserIds,
+    required List<Map<String, dynamic>> mirroredVisitRows,
+  }) async {
+    final participants = <String>{creatorUserId, ...taggedUserIds}.toList();
+    final visitIdByUserId = <String, String>{
+      creatorUserId: originalVisitId,
+    };
+
+    for (final row in mirroredVisitRows) {
+      final rowUserId = row['id']?.toString();
+      final rowVisitId = row['visit_id']?.toString();
+      if (rowUserId == null || rowVisitId == null) continue;
+      visitIdByUserId[rowUserId] = rowVisitId;
+    }
+
+    final rows = <Map<String, dynamic>>[];
+    for (final ownerUserId in participants) {
+      final visitId = visitIdByUserId[ownerUserId];
+      if (visitId == null) continue;
+
+      for (final taggedUserId in participants) {
+        if (taggedUserId == ownerUserId) continue;
+        rows.add({
+          'visit_id': int.parse(visitId),
+          'tagged_user_id': taggedUserId,
+        });
+      }
+    }
+
+    if (rows.isEmpty) return;
+    await _supabase.from(AppConstants.tableVisitTags).insert(rows);
+  }
+
+  /// Tags andere User bei einem Besuch.
+  static Future<void> tagUsers({
+    required String visitId,
+    required List<String> taggedUserIds,
+  }) async {
+    await _insertTagRows(visitId: visitId, taggedUserIds: taggedUserIds);
   }
 
   /// Gibt alle getaggten User eines Besuchs zurück.

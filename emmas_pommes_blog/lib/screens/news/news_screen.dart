@@ -45,6 +45,48 @@ class NewsScreenState extends State<NewsScreen> {
   List<_NewsItem> _items = [];
   bool _loading = true;
 
+  bool _sameNum(num? a, num? b) {
+    if (a == null && b == null) return true;
+    if (a == null || b == null) return false;
+    return (a - b).abs() < 0.0001;
+  }
+
+  Besuch? _findGroupOriginal(
+    Besuch candidate,
+    List<Besuch> allVisits,
+    Map<String, List<AppUser>> tagsByVisit,
+  ) {
+    final candidateTags = tagsByVisit[candidate.visitId] ?? const <AppUser>[];
+    if (candidateTags.isEmpty) return null;
+
+    Besuch? oldest;
+    for (final visit in allVisits) {
+      final visitTags = tagsByVisit[visit.visitId] ?? const <AppUser>[];
+      if (visitTags.length != candidateTags.length) continue;
+
+      final sameLocation = visit.location == candidate.location;
+      final sameCoreData =
+          (visit.review ?? '') == (candidate.review ?? '') &&
+              visit.countVisitors == candidate.countVisitors &&
+              _sameNum(visit.price, candidate.price) &&
+              _sameNum(visit.overallRating, candidate.overallRating) &&
+              _sameNum(visit.serviceRating, candidate.serviceRating) &&
+              _sameNum(visit.waitingTimeRating, candidate.waitingTimeRating) &&
+              _sameNum(visit.ambientRating, candidate.ambientRating);
+
+      if (!sameLocation || !sameCoreData) continue;
+
+      final samePeople = visitTags.map((u) => u.id).toSet() ==
+          candidateTags.map((u) => u.id).toSet();
+      if (!samePeople) continue;
+
+      if (oldest == null || visit.createdAt.isBefore(oldest.createdAt)) {
+        oldest = visit;
+      }
+    }
+    return oldest;
+  }
+
   void reload() => _load();
 
   @override
@@ -100,8 +142,19 @@ class NewsScreenState extends State<NewsScreen> {
       }
 
       // Visits
-      for (final row in (results[0] as List)) {
-        final besuch = Besuch.fromJson(row);
+      final visits = (results[0] as List)
+          .map((row) => Besuch.fromJson(row as Map<String, dynamic>))
+          .toList();
+
+      for (final besuch in visits) {
+        final tags = tagsByVisit[besuch.visitId] ?? const <AppUser>[];
+        if (tags.isNotEmpty) {
+          final groupOriginal = _findGroupOriginal(besuch, visits, tagsByVisit);
+          if (groupOriginal != null && groupOriginal.visitId != besuch.visitId) {
+            continue;
+          }
+        }
+
         items.add(_NewsItem(
           type: _NewsType.visit,
           date: besuch.createdAt,
