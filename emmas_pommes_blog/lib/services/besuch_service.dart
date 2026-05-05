@@ -8,7 +8,7 @@ import 'image_service.dart';
 class BesuchService {
   static final _supabase = Supabase.instance.client;
 
-  /// Erstellt einen neuen Besuch.
+  /// Erstellt einen neuen Besuch und optional Gruppen-Kopien.
   static Future<Besuch> create({
     required String userId,
     required String location,
@@ -40,27 +40,31 @@ class BesuchService {
         .insert(data)
         .select('*, user(*), pommesbude(*)')
         .single();
-    final besuch = Besuch.fromJson(response);
+    final originalVisit = Besuch.fromJson(response);
 
     final uniqueTaggedUserIds = taggedUserIds
         .where((id) => id != userId)
         .toSet()
         .toList();
-
-    if (uniqueTaggedUserIds.isNotEmpty) {
-      final mirroredVisitRows = await _insertTaggedVisitRows(
-        sourceData: data,
-        taggedUserIds: uniqueTaggedUserIds,
-      );
-      await _insertGroupTagRows(
-        originalVisitId: besuch.visitId,
-        creatorUserId: userId,
-        taggedUserIds: uniqueTaggedUserIds,
-        mirroredVisitRows: mirroredVisitRows,
-      );
+    if (uniqueTaggedUserIds.isEmpty) {
+      return originalVisit;
     }
 
-    return besuch;
+    final participantIds = <String>{userId, ...uniqueTaggedUserIds}.toList();
+    final mirroredVisitRows = await _insertMirroredVisitRows(
+      sourceData: data,
+      taggedUserIds: uniqueTaggedUserIds,
+    );
+    final mirroredVisitIds = mirroredVisitRows
+        .map((row) => row['visit_id'].toString())
+        .toList();
+
+    await _insertVisitTagRows(
+      visitIds: [originalVisit.visitId, ...mirroredVisitIds],
+      participantIds: participantIds,
+    );
+
+    return originalVisit;
   }
 
   static Future<List<Besuch>> getByUser(String userId) async {
@@ -80,7 +84,7 @@ class BesuchService {
     return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
-  /// Lädt einen einzelnen Besuch per visit_id
+  /// Lädt einen einzelnen Besuch per visit_id.
   static Future<Besuch> getById(String visitId) async {
     final response = await _supabase
         .from(AppConstants.tableVisit)
@@ -100,7 +104,11 @@ class BesuchService {
     final paths = <String>[];
     for (final file in files) {
       final path = await ImageService.uploadEssenImage(
-          userId, location, file.name, file.bytes);
+        userId,
+        location,
+        file.name,
+        file.bytes,
+      );
       paths.add(path);
     }
     return paths;
@@ -108,106 +116,76 @@ class BesuchService {
 
   /// Gibt signed URLs aller Bilder eines Besuchs zurück.
   static Future<List<String>> getVisitImages(
-      String userId, String location) async {
+    String userId,
+    String location,
+  ) async {
     return ImageService.getEssenImages(userId, location);
   }
 
-  /// Returns a map of userId -> visitCount, sorted descending
-  static Future<List<Map<String, dynamic>>> getUserRanking(
-      {int limit = 50}) async {
+  /// Returns a map of userId -> visitCount, sorted descending.
+  static Future<List<Map<String, dynamic>>> getUserRanking({
+    int limit = 50,
+  }) async {
     final response = await _supabase
         .from(AppConstants.tableVisit)
         .select('id, user(*)');
 
     final visitsByUser = <String, Map<String, dynamic>>{};
     for (final row in (response as List)) {
-      final uid = row['id'].toString();
-      if (!visitsByUser.containsKey(uid)) {
-        visitsByUser[uid] = {
+      final userId = row['id'].toString();
+      if (!visitsByUser.containsKey(userId)) {
+        visitsByUser[userId] = {
           'user': row['user'],
           'count': 0,
         };
       }
-      visitsByUser[uid]!['count'] = (visitsByUser[uid]!['count'] as int) + 1;
+      visitsByUser[userId]!['count'] = (visitsByUser[userId]!['count'] as int) + 1;
     }
 
     final ranking = visitsByUser.values.toList()
-      ..sort(
-          (a, b) => (b['count'] as int).compareTo(a['count'] as int));
+      ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
     return ranking.take(limit).toList();
   }
 
   // ── Tagging ──────────────────────────────────────────────────
 
-  static Future<void> _insertTagRows({
-    required String visitId,
-    required List<String> taggedUserIds,
+  static Future<void> _insertVisitTagRows({
+    required List<String> visitIds,
+    required List<String> participantIds,
   }) async {
-    if (taggedUserIds.isEmpty) return;
-    final rows = taggedUserIds
-        .map((uid) => {
-              'visit_id': int.parse(visitId),
-              'tagged_user_id': uid,
-            })
+    if (visitIds.isEmpty || participantIds.isEmpty) return;
+    final rows = visitIds
+        .map(
+          (visitId) => {
+            'visit_id': int.parse(visitId),
+            'tagged_user_ids': participantIds,
+          },
+        )
         .toList();
     await _supabase.from(AppConstants.tableVisitTags).insert(rows);
   }
 
-  static Future<List<Map<String, dynamic>>> _insertTaggedVisitRows({
+  static Future<List<Map<String, dynamic>>> _insertMirroredVisitRows({
     required Map<String, dynamic> sourceData,
     required List<String> taggedUserIds,
   }) async {
     final rows = taggedUserIds
         .map(
-          (uid) => {
+          (userId) => {
             ...sourceData,
-            'id': uid,
+            'id': userId,
           },
         )
         .toList();
+
     final response = await _supabase
         .from(AppConstants.tableVisit)
         .insert(rows)
         .select('visit_id, id');
+
     return (response as List)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
-  }
-
-  static Future<void> _insertGroupTagRows({
-    required String originalVisitId,
-    required String creatorUserId,
-    required List<String> taggedUserIds,
-    required List<Map<String, dynamic>> mirroredVisitRows,
-  }) async {
-    final participants = <String>{creatorUserId, ...taggedUserIds}.toList();
-    final visitIdByUserId = <String, String>{
-      creatorUserId: originalVisitId,
-    };
-
-    for (final row in mirroredVisitRows) {
-      final rowUserId = row['id']?.toString();
-      final rowVisitId = row['visit_id']?.toString();
-      if (rowUserId == null || rowVisitId == null) continue;
-      visitIdByUserId[rowUserId] = rowVisitId;
-    }
-
-    final rows = <Map<String, dynamic>>[];
-    for (final ownerUserId in participants) {
-      final visitId = visitIdByUserId[ownerUserId];
-      if (visitId == null) continue;
-
-      for (final taggedUserId in participants) {
-        if (taggedUserId == ownerUserId) continue;
-        rows.add({
-          'visit_id': int.parse(visitId),
-          'tagged_user_id': taggedUserId,
-        });
-      }
-    }
-
-    if (rows.isEmpty) return;
-    await _supabase.from(AppConstants.tableVisitTags).insert(rows);
   }
 
   /// Tags andere User bei einem Besuch.
@@ -215,34 +193,74 @@ class BesuchService {
     required String visitId,
     required List<String> taggedUserIds,
   }) async {
-    await _insertTagRows(visitId: visitId, taggedUserIds: taggedUserIds);
+    final uniqueTaggedUserIds = taggedUserIds.toSet().toList();
+    if (uniqueTaggedUserIds.isEmpty) return;
+
+    final visit = await _supabase
+        .from(AppConstants.tableVisit)
+        .select('id')
+        .eq('visit_id', int.parse(visitId))
+        .single();
+    final creatorUserId = visit['id'].toString();
+
+    await _insertVisitTagRows(
+      visitIds: [visitId],
+      participantIds: <String>{creatorUserId, ...uniqueTaggedUserIds}.toList(),
+    );
   }
 
   /// Gibt alle getaggten User eines Besuchs zurück.
   static Future<List<AppUser>> getTaggedUsers(String visitId) async {
-    final response = await _supabase
+    final visitResponse = await _supabase
+        .from(AppConstants.tableVisit)
+        .select('id')
+        .eq('visit_id', int.parse(visitId))
+        .single();
+    final visitOwnerId = visitResponse['id'].toString();
+
+    final tagRows = await _supabase
         .from(AppConstants.tableVisitTags)
-        .select('tagged_user_id, user:tagged_user_id(*)')
+        .select('tagged_user_ids')
         .eq('visit_id', int.parse(visitId));
-    return (response as List)
-        .where((row) => row['user'] != null)
-        .map((row) => AppUser.fromJson(row['user']))
-        .toList();
+
+    if ((tagRows as List).isEmpty) return [];
+
+    final tagRow = tagRows.first as Map<String, dynamic>;
+    final taggedUserIds = (tagRow['tagged_user_ids'] as List?)
+            ?.map((value) => value.toString())
+            .where((id) => id != visitOwnerId)
+            .toList() ??
+        [];
+
+    if (taggedUserIds.isEmpty) return [];
+
+    final users = await _supabase
+        .from(AppConstants.tableUser)
+        .select()
+        .inFilter('id', taggedUserIds);
+    return (users as List).map((json) => AppUser.fromJson(json)).toList();
   }
 
   /// Gibt Besuche zurück, bei denen der User getaggt wurde.
   static Future<List<Besuch>> getTaggedVisits(String userId) async {
-    final response = await _supabase
+    final tagRows = await _supabase
         .from(AppConstants.tableVisitTags)
-        .select('visit_id, visit:visit_id(*, user(*), pommesbude(*))')
-        .eq('tagged_user_id', userId);
-    final visits = <Besuch>[];
-    for (final row in (response as List)) {
-      if (row['visit'] != null) {
-        visits.add(Besuch.fromJson(row['visit']));
-      }
-    }
-    return visits;
+        .select('visit_id, tagged_user_ids')
+        .contains('tagged_user_ids', [userId]);
+
+    if (tagRows.isEmpty) return [];
+
+    final visitIds = (tagRows as List)
+        .map((row) => (row as Map<String, dynamic>)['visit_id'].toString())
+        .toSet()
+        .toList();
+
+    final response = await _supabase
+        .from(AppConstants.tableVisit)
+        .select('*, pommesbude(*), user(*)')
+        .inFilter('visit_id', visitIds.map(int.parse).toList())
+        .order('created_at', ascending: false);
+    return (response as List).map((json) => Besuch.fromJson(json)).toList();
   }
 
   /// Alle User laden (für die Tag-Auswahl).

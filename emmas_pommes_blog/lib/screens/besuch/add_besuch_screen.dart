@@ -145,14 +145,7 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
     try {
       final userId = AuthService.currentUser!.id;
 
-      // Bilder hochladen
-      if (_images.isNotEmpty) {
-        await BesuchService.uploadImages(
-          userId: userId,
-          location: widget.bude.id,
-          files: _images,
-        );
-      }
+      final taggedUserIds = _taggedUsers.map((u) => u.id).toList();
 
       final besuch = await BesuchService.create(
         location: widget.bude.id,
@@ -168,10 +161,35 @@ class _AddBesuchScreenState extends State<AddBesuchScreen> {
         serviceRating: _serviceRating > 0 ? _serviceRating : null,
         waitingTimeRating: _waitingTimeRating > 0 ? _waitingTimeRating : null,
         ambientRating: _ambientRating > 0 ? _ambientRating : null,
-        taggedUserIds: _taggedUsers.map((u) => u.id).toList(),
+        taggedUserIds: taggedUserIds,
       );
 
-      if (mounted) Navigator.of(context).pop(true);
+      var imageUploadFailed = false;
+      if (_images.isNotEmpty) {
+        final participantIds = <String>{userId, ...taggedUserIds}.toList();
+        for (final participantId in participantIds) {
+          try {
+            await BesuchService.uploadImages(
+              userId: participantId,
+              location: widget.bude.id,
+              files: _images,
+            );
+          } catch (_) {
+            imageUploadFailed = true;
+          }
+        }
+      }
+
+      if (mounted) {
+        if (imageUploadFailed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Besuch gespeichert, aber das Bild konnte nicht hochgeladen werden.'),
+            ),
+          );
+        }
+        Navigator.of(context).pop(true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

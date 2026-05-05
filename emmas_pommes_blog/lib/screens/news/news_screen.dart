@@ -51,40 +51,19 @@ class NewsScreenState extends State<NewsScreen> {
     return (a - b).abs() < 0.0001;
   }
 
-  Besuch? _findGroupOriginal(
-    Besuch candidate,
-    List<Besuch> allVisits,
-    Map<String, List<AppUser>> tagsByVisit,
-  ) {
-    final candidateTags = tagsByVisit[candidate.visitId] ?? const <AppUser>[];
-    if (candidateTags.isEmpty) return null;
-
-    Besuch? oldest;
-    for (final visit in allVisits) {
-      final visitTags = tagsByVisit[visit.visitId] ?? const <AppUser>[];
-      if (visitTags.length != candidateTags.length) continue;
-
-      final sameLocation = visit.location == candidate.location;
-      final sameCoreData =
-          (visit.review ?? '') == (candidate.review ?? '') &&
-              visit.countVisitors == candidate.countVisitors &&
-              _sameNum(visit.price, candidate.price) &&
-              _sameNum(visit.overallRating, candidate.overallRating) &&
-              _sameNum(visit.serviceRating, candidate.serviceRating) &&
-              _sameNum(visit.waitingTimeRating, candidate.waitingTimeRating) &&
-              _sameNum(visit.ambientRating, candidate.ambientRating);
-
-      if (!sameLocation || !sameCoreData) continue;
-
-      final samePeople = visitTags.map((u) => u.id).toSet() ==
-          candidateTags.map((u) => u.id).toSet();
-      if (!samePeople) continue;
-
-      if (oldest == null || visit.createdAt.isBefore(oldest.createdAt)) {
-        oldest = visit;
-      }
-    }
-    return oldest;
+  String _groupKey(Besuch visit, List<String> participantIds) {
+    final sortedParticipants = List<String>.from(participantIds)..sort();
+    return [
+      visit.location,
+      visit.price?.toString() ?? '',
+      visit.review ?? '',
+      visit.countVisitors?.toString() ?? '',
+      visit.overallRating?.toString() ?? '',
+      visit.serviceRating?.toString() ?? '',
+      visit.waitingTimeRating?.toString() ?? '',
+      visit.ambientRating?.toString() ?? '',
+      sortedParticipants.join('|'),
+    ].join('::');
   }
 
   void reload() => _load();
@@ -129,16 +108,32 @@ class NewsScreenState extends State<NewsScreen> {
 
       final items = <_NewsItem>[];
 
-      // Load all tags for recent visits in one query
+      // Load all visit participant arrays in one query
       final tagRows = await supabase
           .from(AppConstants.tableVisitTags)
-          .select('visit_id, user:tagged_user_id(*)');
-      // Group tags by visit_id
-      final tagsByVisit = <String, List<AppUser>>{};
+          .select('visit_id, tagged_user_ids');
+      final participantIdsByVisit = <String, List<String>>{};
+      final allParticipantIds = <String>{};
       for (final row in tagRows) {
         final key = row['visit_id'].toString();
-        final user = AppUser.fromJson(row['user']);
-        tagsByVisit.putIfAbsent(key, () => []).add(user);
+        final ids = (row['tagged_user_ids'] as List?)
+                ?.map((value) => value.toString())
+                .toList() ??
+            [];
+        participantIdsByVisit[key] = ids;
+        allParticipantIds.addAll(ids);
+      }
+
+      final usersById = <String, AppUser>{};
+      if (allParticipantIds.isNotEmpty) {
+        final userRows = await supabase
+            .from(AppConstants.tableUser)
+            .select()
+            .inFilter('id', allParticipantIds.toList());
+        for (final row in userRows as List) {
+          final user = AppUser.fromJson(row);
+          usersById[user.id] = user;
+        }
       }
 
       // Visits
@@ -146,14 +141,34 @@ class NewsScreenState extends State<NewsScreen> {
           .map((row) => Besuch.fromJson(row as Map<String, dynamic>))
           .toList();
 
+      final representativeByGroupKey = <String, Besuch>{};
+      final participantIdsByGroupKey = <String, List<String>>{};
+
       for (final besuch in visits) {
-        final tags = tagsByVisit[besuch.visitId] ?? const <AppUser>[];
-        if (tags.isNotEmpty) {
-          final groupOriginal = _findGroupOriginal(besuch, visits, tagsByVisit);
-          if (groupOriginal != null && groupOriginal.visitId != besuch.visitId) {
-            continue;
-          }
+        final participantIds = participantIdsByVisit[besuch.visitId];
+        if (participantIds == null || participantIds.isEmpty) {
+          representativeByGroupKey[besuch.visitId] = besuch;
+          participantIdsByGroupKey[besuch.visitId] = [];
+          continue;
         }
+
+        final groupKey = _groupKey(besuch, participantIds);
+        final currentRepresentative = representativeByGroupKey[groupKey];
+        if (currentRepresentative == null ||
+            besuch.createdAt.isBefore(currentRepresentative.createdAt)) {
+          representativeByGroupKey[groupKey] = besuch;
+          participantIdsByGroupKey[groupKey] = participantIds;
+        }
+      }
+
+      for (final entry in representativeByGroupKey.entries) {
+        final besuch = entry.value;
+        final participantIds = participantIdsByGroupKey[entry.key] ?? const <String>[];
+        final taggedUsers = participantIds
+            .where((id) => id != besuch.userId)
+            .map((id) => usersById[id])
+            .whereType<AppUser>()
+            .toList();
 
         items.add(_NewsItem(
           type: _NewsType.visit,
@@ -161,7 +176,7 @@ class NewsScreenState extends State<NewsScreen> {
           user: besuch.user,
           bude: besuch.pommesbude,
           besuch: besuch,
-          taggedUsers: tagsByVisit[besuch.visitId] ?? [],
+          taggedUsers: taggedUsers,
         ));
       }
 
@@ -304,8 +319,11 @@ class NewsScreenState extends State<NewsScreen> {
         final budeName = item.bude?.name ?? 'einer Pommesbude';
         String subtitle;
         if (item.taggedUsers.isNotEmpty) {
-          final names = item.taggedUsers.map((u) => u.displayName).join(', ');
-          subtitle = 'war mit $names bei $budeName essen';
+          final firstName = item.taggedUsers.first.displayName;
+          final otherCount = item.taggedUsers.length - 1;
+          subtitle = otherCount > 0
+              ? 'war mit $firstName und $otherCount weiteren bei $budeName essen'
+              : 'war mit $firstName bei $budeName essen';
         } else {
           subtitle = 'war bei $budeName essen';
         }

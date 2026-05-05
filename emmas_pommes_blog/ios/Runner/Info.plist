@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Diese App benötigt Zugriff auf deinen Standort, um Pommesbuden in der Nähe zu zeigen.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Diese App benötigt Zugriff auf deinen Standort, um Pommesbuden in der Nähe zu zeigen.</string>
 </dict>
 </plist>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../config/constants.dart';
 import '../../config/theme.dart';
 import '../../models/pommesbude.dart';
@@ -24,11 +25,37 @@ class _MapScreenState extends State<MapScreen> {
   bool _loading = true;
   bool _addMode = false;
   LatLng? _selectedPosition;
+  LatLng? _currentPosition;
 
   @override
   void initState() {
     super.initState();
     _loadBuden();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
+      
+      if (mounted) {
+        final position = await Geolocator.getCurrentPosition();
+        if (mounted) {
+          setState(() {
+            _currentPosition = LatLng(position.latitude, position.longitude);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Standort konnte nicht abgerufen werden: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _loadBuden() async {
@@ -136,6 +163,24 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       )),
+                  if (_currentPosition != null)
+                    Marker(
+                      point: _currentPosition!,
+                      width: 40,
+                      height: 40,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: PommesTheme.primaryPurple.withValues(alpha: 0.3),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: PommesTheme.primaryPurple, width: 2),
+                        ),
+                        child: const Icon(
+                          Icons.my_location,
+                          color: PommesTheme.primaryPurple,
+                          size: 20,
+                        ),
+                      ),
+                    ),
                   if (_selectedPosition != null)
                     Marker(
                       point: _selectedPosition!,
@@ -189,45 +234,52 @@ class _MapScreenState extends State<MapScreen> {
                 label: const Text('Pommesbude hier hinzufügen'),
               ),
             ),
+          if (!_addMode)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'zoomIn',
+                    onPressed: () {
+                      final z = _mapController.camera.zoom + 1;
+                      _mapController.move(_mapController.camera.center, z.clamp(3, 18));
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                  const SizedBox(height: 12),
+                  FloatingActionButton.small(
+                    heroTag: 'zoomOut',
+                    onPressed: () {
+                      final z = _mapController.camera.zoom - 1;
+                      _mapController.move(_mapController.camera.center, z.clamp(3, 18));
+                    },
+                    child: const Icon(Icons.remove),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_currentPosition != null)
+                    FloatingActionButton.small(
+                      heroTag: 'myLocation',
+                      onPressed: () {
+                        _mapController.move(_currentPosition!, 15);
+                      },
+                      child: const Icon(Icons.my_location),
+                    ),
+                  if (_currentPosition != null)
+                    const SizedBox(height: 12),
+                  FloatingActionButton.small(
+                    heroTag: 'add',
+                    onPressed: () => setState(() => _addMode = true),
+                    child: const Icon(Icons.add_location_alt),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
-      floatingActionButton: !_addMode
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.small(
-                  heroTag: 'zoomIn',
-                  onPressed: () {
-                    final z = _mapController.camera.zoom + 1;
-                    _mapController.move(_mapController.camera.center, z.clamp(3, 18));
-                  },
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 4),
-                FloatingActionButton.small(
-                  heroTag: 'zoomOut',
-                  onPressed: () {
-                    final z = _mapController.camera.zoom - 1;
-                    _mapController.move(_mapController.camera.center, z.clamp(3, 18));
-                  },
-                  child: const Icon(Icons.remove),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: 'refresh',
-                  onPressed: _loadBuden,
-                  child: const Icon(Icons.refresh),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.extended(
-                  heroTag: 'add',
-                  onPressed: () => setState(() => _addMode = true),
-                  icon: const Icon(Icons.add_location_alt),
-                  label: const Text('Bude hinzufügen'),
-                ),
-              ],
-            )
-          : null,
+      floatingActionButton: null,
     );
   }
 
