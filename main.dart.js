@@ -8514,7 +8514,7 @@ var $async$MG=A.p(function(a,b){if(a===1)return A.q(b,r)
 for(;;)switch(s){case 0:if($.a4==null)A.avJ()
 $.a4.toString
 s=2
-return A.n($.aKL().Et(0,".env"),$async$MG)
+return A.n($.aKL().Et(0,"assets/.env"),$async$MG)
 case 2:q=$.aKL().ga0N().h(0,"PROJECT_URL")
 q.toString
 p=$.aKL().ga0N().h(0,"PUBLISHABLE_KEY")
