@@ -7,6 +7,7 @@ import '../../services/besuch_service.dart';
 import '../../widgets/rating_bar.dart';
 import '../../widgets/user_avatar.dart';
 import '../bude/bude_detail_screen.dart';
+import '../profile/user_profile_screen.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -226,69 +227,80 @@ class RankingScreenState extends State<RankingScreen>
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Rank
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: medalColor ?? PommesTheme.surfaceDark,
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  '$rank',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: medalColor != null
-                        ? PommesTheme.primaryPurple
-                        : Colors.white,
+      child: InkWell(
+        onTap: user != null
+            ? () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => UserProfileScreen(user: user),
+                  ),
+                )
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Rank
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: medalColor ?? PommesTheme.surfaceDark,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '$rank',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: medalColor != null
+                          ? PommesTheme.primaryPurple
+                          : Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 16),
-            // Avatar
-            UserAvatar(user: user, radius: 20),
-            const SizedBox(width: 12),
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 16),
+              // Avatar
+              UserAvatar(user: user, radius: 20),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.displayName ?? 'Unbekannt',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    Text(
+                      '@${user?.username ?? '?'}',
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              // Count
+              Column(
                 children: [
                   Text(
-                    user?.displayName ?? 'Unbekannt',
+                    '$count',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: PommesTheme.pommesYellow,
+                    ),
                   ),
-                  Text(
-                    '@${user?.username ?? '?'}',
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
+                  const Text('Besuche',
+                      style: TextStyle(color: Colors.white54, fontSize: 11)),
                 ],
               ),
-            ),
-            // Count
-            Column(
-              children: [
-                Text(
-                  '$count',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: PommesTheme.pommesYellow,
-                  ),
-                ),
-                const Text('Besuche',
-                    style: TextStyle(color: Colors.white54, fontSize: 11)),
-              ],
-            ),
-          ],
+              const Icon(Icons.chevron_right, color: Colors.white38, size: 20),
+            ],
+          ),
         ),
       ),
     );

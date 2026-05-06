@@ -9,6 +9,7 @@ import '../../models/pommesbude.dart';
 import '../../widgets/user_avatar.dart';
 import '../bude/bude_detail_screen.dart';
 import '../besuch/besuch_detail_screen.dart';
+import '../profile/user_profile_screen.dart';
 
 enum _NewsType { visit, budeAdded, userJoined, secretLeak }
 
@@ -334,6 +335,13 @@ class NewsScreenState extends State<NewsScreen> {
           avatar: item.user,
           title: item.user?.displayName ?? 'Irgendwer',
           subtitle: subtitle,
+          onAvatarTap: item.user != null
+              ? () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => UserProfileScreen(user: item.user!),
+                    ),
+                  )
+              : null,
           trailing: item.besuch?.overallRating != null
               ? Row(
                   mainAxisSize: MainAxisSize.min,
@@ -386,6 +394,13 @@ class NewsScreenState extends State<NewsScreen> {
           avatar: item.user,
           title: item.user?.displayName ?? 'Neuer User',
           subtitle: 'hat sich registriert – willkommen! 🎉',
+          onTap: item.user != null
+              ? () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => UserProfileScreen(user: item.user!),
+                    ),
+                  )
+              : null,
         );
     }
   }
@@ -508,6 +523,7 @@ class NewsScreenState extends State<NewsScreen> {
     AppUser? avatar,
     Widget? trailing,
     VoidCallback? onTap,
+    VoidCallback? onAvatarTap,
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
@@ -521,7 +537,10 @@ class NewsScreenState extends State<NewsScreen> {
             children: [
               // Icon or Avatar
               if (avatar != null)
-                UserAvatar(user: avatar, radius: 20)
+                GestureDetector(
+                  onTap: onAvatarTap,
+                  child: UserAvatar(user: avatar, radius: 20),
+                )
               else
                 CircleAvatar(
                   radius: 20,
