@@ -332,7 +332,7 @@ class NewsScreenState extends State<NewsScreen> {
           iconColor: PommesTheme.pommesYellow,
           date: dateStr,
           avatar: item.user,
-          title: item.user?.displayName ?? 'Jemand',
+          title: item.user?.displayName ?? 'Irgendwer',
           subtitle: subtitle,
           trailing: item.besuch?.overallRating != null
               ? Row(
@@ -459,11 +459,15 @@ class NewsScreenState extends State<NewsScreen> {
             ] else ...[
               Row(
                 children: [
-                  UserAvatar(user: item.user, radius: 18),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white24,
+                    child: const Icon(Icons.person, color: Colors.white54, size: 20),
+                  ),
                   const SizedBox(width: 10),
-                  Text(
-                    '${item.user?.displayName ?? '?'}s Geheimnis:',
-                    style: const TextStyle(
+                  const Text(
+                    'Geheimnis der Woche:',
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
