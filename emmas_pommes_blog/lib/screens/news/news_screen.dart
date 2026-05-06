@@ -283,7 +283,7 @@ class NewsScreenState extends State<NewsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('📰 Neuigkeiten'),
+        title: const Text('Neuigkeiten'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

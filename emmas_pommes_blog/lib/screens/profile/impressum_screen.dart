@@ -18,18 +18,10 @@ class ImpressumScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Center(
-                  child: Text('🍟', style: TextStyle(fontSize: 64)),
-                ),
-                const SizedBox(height: 16),
-                const Center(
-                  child: Text(
-                    "Emma's Pommesblog",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: PommesTheme.pommesYellow,
-                    ),
+                Center(
+                  child: Image.asset(
+                    'assets/logo_text.jpg',
+                    height: 350,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -37,22 +29,24 @@ class ImpressumScreen extends StatelessWidget {
                 _sectionTitle('Was ist diese App?'),
                 const SizedBox(height: 8),
                 const Text(
-                  "Emma's Pommesblog ist eine App für alle Pommes-Liebhaber! "
-                  'Hier könnt ihr eure liebsten Pommesbuden entdecken, bewerten '
-                  'und mit Freunden teilen. Tragt eure Besuche ein, bewertet die '
+                  "Emma's Pommesblog ist eine App für alle Pommes-Liebhaber! \n"
+                  "Passend zu Emma's Histaminunverträglichkeit haben wir diese App entwickelt, damit wir "
+                  "sie gemeinsam unterstützen können, die besten Pommesbuden Deutschlands und darüber hinaus "
+                  "zu entdecken. \n"
+                  'Tragt eure Besuche ein, bewertet die '
                   'Pommes und schaut, welche Bude die beste der Stadt ist.',
                   style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                 ),
                 const SizedBox(height: 24),
 
-                _sectionTitle('Features'),
+                _sectionTitle('Unsere genialen Features'),
                 const SizedBox(height: 8),
                 _featureItem(Icons.map, 'Interaktive Karte',
                     'Entdecke Pommesbuden in deiner Nähe'),
                 _featureItem(Icons.star, 'Bewertungssystem',
                     'Bewerte Pommesbuden nach verschiedenen Kategorien'),
                 _featureItem(Icons.photo_camera, 'Foto-Upload',
-                    'Teile Bilder von deinem Essen und den Buden'),
+                    'Teile Bilder von deinem Essen MIT DIR'),
                 _featureItem(Icons.emoji_events, 'Rangliste',
                     'Schau, welche Bude die meisten Besuche hat'),
                 _featureItem(Icons.newspaper, 'News-Feed',
@@ -61,11 +55,25 @@ class ImpressumScreen extends StatelessWidget {
                     'Jeden Sonntag wird ein Geheimnis gelüftet...'),
                 const SizedBox(height: 24),
 
+                _sectionTitle('Zu den Geheimnissen ...'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Bei der Registrierung musstet ihr ein geheimes Geheimnis über euch preisgeben. \n'
+                  "Um euch bei Laune zu halten, wird jeden Sonntag eines dieser Geheimnisse (natürlich zufällig) "
+                  "gelüftet. Es lohnt sich also, regelmäßig vorbeizuschauen! \n"
+                  "Es gibt nur ein Problem: Ihr MÜSST in der Woche davor (Montag bis Sonntag) mindestens "
+                  "einmal Pommes essen gewesen sein, damit ihr das Geheimnis sehen könnt. Ansonsten bleibt es für euch verborgen... \n"
+                  "Also: Auf die Pommes, fertig, los!",
+                  style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+                ),
+                const SizedBox(height: 24),
+
                 _sectionTitle('Über uns'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Diese App wurde mit viel Liebe (und Pommes) entwickelt. '
-                  'Sie ist ein Spaßprojekt unter Freunden und nicht kommerziell.',
+                  'Diese App wurde mit viel Liebe von Lukas und Matteo (und vielleicht etwas Claude) '
+                  "zu Emma's 22. Geburtstag entwickelt. "
+                  'Wir freuen uns wenn sie regelmäßig genutzt wird!',
                   style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                 ),
                 const SizedBox(height: 24),

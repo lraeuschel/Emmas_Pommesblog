@@ -74,13 +74,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    const Text(
-                      '🍟 Willkommen!',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: PommesTheme.pommesYellow,
-                      ),
+                    Image.asset(
+                      'assets/logo_text.jpg',
+                      height: 300,
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -167,10 +163,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Secret (fun personal fact)
                     TextFormField(
                       controller: _secretController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Mein Geheimnis 🤫',
-                        prefixIcon: Icon(Icons.lock_open),
+                        prefixIcon: const Icon(Icons.lock_open),
                         hintText: 'Etwas Geheimes über dich...',
+                        suffixIcon: Tooltip(
+                          message: 'Soo, hier müsst ihr jetzt ein Geheimnis über euch eintragen hahaha!\n'
+                              'Jeden Sonntag wird zufällig ein Geheimnis\n'
+                              'aus der Gruppe enthüllt - natürlich anonym also haut was raus.\n' 
+                              'Aber nur, wenn ihr in der Woche davor mindestens einmal Pommes essen wart!',
+                          triggerMode: TooltipTriggerMode.tap,
+                          showDuration: const Duration(seconds: 5),
+                          child: const Icon(Icons.help_outline, size: 20),
+                        ),
                       ),
                       maxLines: 2,
                     ),

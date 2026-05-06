@@ -64,20 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // Logo / Title
-                    const Text(
-                      '🍟',
-                      style: TextStyle(fontSize: 80),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Emma's\nPommesblog",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: PommesTheme.pommesYellow,
-                        height: 1.2,
-                      ),
+                    Image.asset(
+                      'assets/logo_text.jpg',
+                      height: 300,
                     ),
                     const SizedBox(height: 8),
                     const Text(
