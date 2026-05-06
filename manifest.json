@@ -1,34 +1,28 @@
 {
-    "name": "emmas_pommes_blog",
-    "short_name": "emmas_pommes_blog",
+    "name": "Emmas Pommesblog",
+    "short_name": "Pommesblog",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Finde und bewerte die besten Pommesbuden!",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "icons/Icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-512.png",
+            "src": "icons/logo.jpg",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/jpeg"
         },
         {
-            "src": "icons/Icon-maskable-192.png",
+            "src": "icons/logo.jpg",
             "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
+            "type": "image/jpeg"
         },
         {
-            "src": "icons/Icon-maskable-512.png",
+            "src": "icons/logo.jpg",
             "sizes": "512x512",
-            "type": "image/png",
+            "type": "image/jpeg",
             "purpose": "maskable"
         }
     ]
