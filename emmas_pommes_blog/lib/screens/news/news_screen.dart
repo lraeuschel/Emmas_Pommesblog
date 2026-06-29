@@ -250,9 +250,9 @@ class NewsScreenState extends State<NewsScreen> {
     final monday = _mondayOfWeek(now);
     final sunday = _sundayOfWeek(now);
 
-    // Wochennummer als deterministischer Seed
-    final weekSeed = monday.millisecondsSinceEpoch;
-    final pickedIndex = weekSeed % usersWithSecrets.length;
+    // Wochennummer als deterministischer Seed (Tage seit Epoch / 7)
+    final weekNumber = monday.millisecondsSinceEpoch ~/ (7 * 24 * 60 * 60 * 1000);
+    final pickedIndex = weekNumber % usersWithSecrets.length;
     final pickedUser = AppUser.fromJson(usersWithSecrets[pickedIndex]);
 
     // Prüfe ob der aktuelle User diese Woche (Mo-So) min. 1x essen war

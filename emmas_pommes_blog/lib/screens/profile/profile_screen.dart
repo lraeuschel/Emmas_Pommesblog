@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/badge_service.dart';
 import '../auth/login_screen.dart';
 import 'impressum_screen.dart';
 
@@ -20,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _saving = false;
   String? _profileImageUrl;
   bool _uploadingImage = false;
+  List<Badge> _badges = [];
 
   @override
   void initState() {
@@ -30,7 +32,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _lastNameController.text = user.lastName;
       _secretController.text = user.secret ?? '';
       _loadProfileImage();
+      _loadBadges();
     }
+  }
+
+  Future<void> _loadBadges() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+    try {
+      final badges = await BadgeService.getBadgesForUser(user.id);
+      if (mounted) setState(() => _badges = badges);
+    } catch (_) {}
   }
 
   Future<void> _loadProfileImage() async {
@@ -269,6 +281,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
+                        // Badges
+                        if (_badges.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: const Text(
+                              'Meine Badges',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _badges.map((badge) => Tooltip(
+                              message: badge.description,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: badge.earned
+                                      ? PommesTheme.primaryPurple
+                                      : PommesTheme.surfaceDark,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: badge.earned
+                                        ? PommesTheme.pommesYellow
+                                        : Colors.white12,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(badge.emoji,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: badge.earned
+                                              ? null
+                                              : Colors.white24,
+                                        )),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      badge.title,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: badge.earned
+                                            ? Colors.white
+                                            : Colors.white24,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ],
                       ],
 
                       const SizedBox(height: 48),

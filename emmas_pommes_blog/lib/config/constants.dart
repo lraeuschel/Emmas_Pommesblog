@@ -4,6 +4,7 @@ class AppConstants {
   static const String tableVisit = 'visit';
   static const String tableUser = 'user';
   static const String tableVisitTags = 'visit_tags';
+  static const String tableVisitLikes = 'visit_likes';
 
   // Storage buckets
   static const String bucketPommesbude = 'pommesbude_image'; // public

@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../models/app_user.dart';
 import '../../models/besuch.dart';
 import '../../services/besuch_service.dart';
+import '../../services/like_service.dart';
 import '../../widgets/image_slideshow.dart';
 import '../../widgets/rating_bar.dart';
 import '../../widgets/user_avatar.dart';
@@ -25,6 +26,8 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
   List<String> _imageUrls = [];
   List<AppUser> _taggedUsers = [];
   bool _loading = true;
+  int _likeCount = 0;
+  bool _liked = false;
 
   @override
   void initState() {
@@ -39,10 +42,14 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
       final results = await Future.wait([
         BesuchService.getVisitImages(besuch.userId, besuch.location),
         BesuchService.getTaggedUsers(widget.visitId),
+        LikeService.getLikeCount(widget.visitId),
+        LikeService.hasLiked(widget.visitId),
       ]);
       _besuch = besuch;
       _imageUrls = results[0] as List<String>;
       _taggedUsers = results[1] as List<AppUser>;
+      _likeCount = results[2] as int;
+      _liked = results[3] as bool;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,6 +58,18 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
       }
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _toggleLike() async {
+    try {
+      final nowLiked = await LikeService.toggleLike(widget.visitId);
+      if (mounted) {
+        setState(() {
+          _liked = nowLiked;
+          _likeCount += nowLiked ? 1 : -1;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -223,6 +242,35 @@ class _BesuchDetailScreenState extends State<BesuchDetailScreen> {
                       ),
                     ),
                   ],
+
+                  // Like button
+                  const SizedBox(height: 20),
+                  Center(
+                    child: OutlinedButton.icon(
+                      onPressed: _toggleLike,
+                      icon: Icon(
+                        _liked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                        color: _liked
+                            ? PommesTheme.pommesYellow
+                            : Colors.white54,
+                      ),
+                      label: Text(
+                        _likeCount > 0 ? '$_likeCount' : 'Gefällt mir',
+                        style: TextStyle(
+                          color: _liked
+                              ? PommesTheme.pommesYellow
+                              : Colors.white54,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: _liked
+                              ? PommesTheme.pommesYellow
+                              : Colors.white24,
+                        ),
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 32),
                 ],

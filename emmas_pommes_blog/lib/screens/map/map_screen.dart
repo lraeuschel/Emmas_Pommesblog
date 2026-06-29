@@ -36,9 +36,13 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _getCurrentLocation() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
       }
       
       if (mounted) {
@@ -47,6 +51,7 @@ class _MapScreenState extends State<MapScreen> {
           setState(() {
             _currentPosition = LatLng(position.latitude, position.longitude);
           });
+          _mapController.move(_currentPosition!, 14);
         }
       }
     } catch (e) {
@@ -127,7 +132,7 @@ class _MapScreenState extends State<MapScreen> {
               maxZoom: 18,
               onTap: _onMapTap,
               interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all,
+                flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
               ),
             ),
             children: [

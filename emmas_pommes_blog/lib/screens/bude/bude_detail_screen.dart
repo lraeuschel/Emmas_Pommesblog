@@ -36,15 +36,12 @@ class _BudeDetailScreenState extends State<BudeDetailScreen> {
       final results = await Future.wait([
         PommesbudeService.getVisitsForBude(widget.bude.id),
         ImageService.getBudeImages(widget.bude.id),
-        ImageService.getAllEssenImagesForBude(widget.bude.id),
       ]);
       _visits = results[0] as List<Besuch>;
       final budeImgs = results[1] as List<String>;
-      final essenImgs = results[2] as List<String>;
       final all = <String>[];
       if (widget.bude.budenImage != null) all.add(widget.bude.budenImage!);
       all.addAll(budeImgs.where((u) => !all.contains(u)));
-      all.addAll(essenImgs);
       _allImages = all;
     } catch (e) {
       if (mounted) {

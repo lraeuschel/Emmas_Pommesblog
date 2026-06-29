@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../models/app_user.dart';
 import '../../models/besuch.dart';
+import '../../services/badge_service.dart';
 import '../../services/besuch_service.dart';
 import '../../services/image_service.dart';
 import '../../widgets/besuch_card.dart';
@@ -20,6 +21,7 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Besuch> _besuche = [];
+  List<Badge> _badges = [];
   bool _loading = true;
   String? _profileImageUrl;
 
@@ -67,9 +69,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final visits = await BesuchService.getByUser(widget.user.id);
+      final results = await Future.wait([
+        BesuchService.getByUser(widget.user.id),
+        BadgeService.getBadgesForUser(widget.user.id),
+      ]);
+      final visits = results[0] as List<Besuch>;
       visits.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       _besuche = visits;
+      _badges = results[1] as List<Badge>;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,6 +159,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
                   ),
+                  // Badges section
+                  if (_badges.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Badges',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _badges.map((badge) => Tooltip(
+                              message: badge.description,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: badge.earned
+                                      ? PommesTheme.primaryPurple
+                                      : PommesTheme.surfaceDark,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: badge.earned
+                                        ? PommesTheme.pommesYellow
+                                        : Colors.white12,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(badge.emoji,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: badge.earned
+                                              ? null
+                                              : Colors.white24,
+                                        )),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      badge.title,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: badge.earned
+                                            ? Colors.white
+                                            : Colors.white24,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
                   // Visits list
                   if (_besuche.isEmpty)
                     const Padding(
