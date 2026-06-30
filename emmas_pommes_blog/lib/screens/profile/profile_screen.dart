@@ -21,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _saving = false;
   String? _profileImageUrl;
   bool _uploadingImage = false;
-  List<Badge> _badges = [];
+  List<PommesBadge> _badges = [];
 
   @override
   void initState() {

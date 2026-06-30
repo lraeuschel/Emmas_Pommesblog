@@ -21,7 +21,7 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   List<Besuch> _besuche = [];
-  List<Badge> _badges = [];
+  List<PommesBadge> _badges = [];
   bool _loading = true;
   String? _profileImageUrl;
 
@@ -76,7 +76,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final visits = results[0] as List<Besuch>;
       visits.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       _besuche = visits;
-      _badges = results[1] as List<Badge>;
+      _badges = results[1] as List<PommesBadge>;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

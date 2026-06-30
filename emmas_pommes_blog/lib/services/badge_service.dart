@@ -3,14 +3,14 @@ import '../config/constants.dart';
 import '../models/besuch.dart';
 import '../models/pommesbude.dart';
 
-class Badge {
+class PommesBadge {
   final String id;
   final String title;
   final String emoji;
   final String description;
   final bool earned;
 
-  Badge({
+  PommesBadge({
     required this.id,
     required this.title,
     required this.emoji,
@@ -23,7 +23,7 @@ class BadgeService {
   static final _supabase = Supabase.instance.client;
 
   /// Berechnet alle Badges für einen User.
-  static Future<List<Badge>> getBadgesForUser(String userId) async {
+  static Future<List<PommesBadge>> getBadgesForUser(String userId) async {
     // Lade alle Besuche des Users mit Pommesbude-Daten
     final visitResponse = await _supabase
         .from(AppConstants.tableVisit)
@@ -51,13 +51,13 @@ class BadgeService {
       visitCountByUser[uid] = (visitCountByUser[uid] ?? 0) + 1;
     }
 
-    final badges = <Badge>[];
+    final badges = <PommesBadge>[];
     final visitCount = visits.length;
     final visitedBudeIds = visits.map((v) => v.location).toSet();
 
     // ── Besuchs-Badges ──────────────────────────────────────
 
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'first_visit',
       title: 'Erster Biss',
       emoji: '🍟',
@@ -65,7 +65,7 @@ class BadgeService {
       earned: visitCount >= 1,
     ));
 
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'five_visits',
       title: 'Stammgast',
       emoji: '⭐',
@@ -73,7 +73,7 @@ class BadgeService {
       earned: visitCount >= 5,
     ));
 
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'ten_visits',
       title: 'Pommes-Profi',
       emoji: '🏅',
@@ -81,7 +81,7 @@ class BadgeService {
       earned: visitCount >= 10,
     ));
 
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'twentyfive_visits',
       title: 'Pommes-Legende',
       emoji: '👑',
@@ -99,7 +99,7 @@ class BadgeService {
       // Nördlichste Bude
       final northernMost = allBuden.reduce(
           (a, b) => a.lat > b.lat ? a : b);
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'northernmost',
         title: 'Nordlicht',
         emoji: '🧭',
@@ -110,7 +110,7 @@ class BadgeService {
       // Südlichste Bude
       final southernMost = allBuden.reduce(
           (a, b) => a.lat < b.lat ? a : b);
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'southernmost',
         title: 'Südwind',
         emoji: '🌴',
@@ -121,7 +121,7 @@ class BadgeService {
       // Westlichste Bude
       final westernMost = allBuden.reduce(
           (a, b) => a.lon < b.lon ? a : b);
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'westernmost',
         title: 'Westwärts',
         emoji: '🌅',
@@ -132,7 +132,7 @@ class BadgeService {
       // Östlichste Bude
       final easternMost = allBuden.reduce(
           (a, b) => a.lon > b.lon ? a : b);
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'easternmost',
         title: 'Ostwärts',
         emoji: '🌄',
@@ -141,7 +141,7 @@ class BadgeService {
       ));
 
       // Alle Buden besucht
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'all_buden',
         title: 'Komplettist',
         emoji: '🗺️',
@@ -150,7 +150,7 @@ class BadgeService {
       ));
 
       // Vielfalt - mindestens 3 verschiedene Buden
-      badges.add(Badge(
+      badges.add(PommesBadge(
         id: 'variety',
         title: 'Entdecker',
         emoji: '🔍',
@@ -162,7 +162,7 @@ class BadgeService {
     // ── Bewertungs-Badges ───────────────────────────────────
 
     final hasTopRating = visits.any((v) => (v.overallRating ?? 0) >= 5);
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'five_stars',
       title: 'Feinschmecker',
       emoji: '🌟',
@@ -172,7 +172,7 @@ class BadgeService {
 
     final hasLowRating = visits.any((v) =>
         v.overallRating != null && v.overallRating! <= 1);
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'one_star',
       title: 'Kritiker',
       emoji: '🧐',
@@ -183,7 +183,7 @@ class BadgeService {
     // ── Ranking-Badge ───────────────────────────────────────
 
     final isTopVisitor = visitCountByUser.values.every((c) => c <= visitCount);
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'most_visits',
       title: 'Pommes-Königin',
       emoji: '🏆',
@@ -195,7 +195,7 @@ class BadgeService {
 
     final hasReview = visits.any(
         (v) => v.review != null && v.review!.isNotEmpty);
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'reviewer',
       title: 'Wortgewandt',
       emoji: '✍️',
@@ -206,7 +206,7 @@ class BadgeService {
     final weekendVisits = visits.where((v) =>
         v.createdAt.weekday == DateTime.saturday ||
         v.createdAt.weekday == DateTime.sunday).length;
-    badges.add(Badge(
+    badges.add(PommesBadge(
       id: 'weekend_warrior',
       title: 'Wochenend-Krieger',
       emoji: '🎉',
